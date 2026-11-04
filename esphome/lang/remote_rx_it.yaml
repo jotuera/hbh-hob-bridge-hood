@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – file di lingua per hbh-remote-rx.yaml: italiano
+# Includi esattamente UN solo file remote_rx_xx in packages. Cambiare lingua rinomina le entità.
+substitutions:
+  n_remote_event: "Evento telecomando"
+  n_last_key: "Ultimo tasto telecomando"
+  n_frames_ok: "Frame del telecomando ricevuti"
+  n_frames_incomplete: "Frame incompleti"
+  n_frames_foreign: "Frame di altri telecomandi"
+  n_wifi: "Segnale Wi-Fi"
+  n_uptime: "Tempo di attività"

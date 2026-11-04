@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – plik językowy dla hbh-remote-rx.yaml: polski
+# W packages dołącz DOKŁADNIE JEDEN plik remote_rx_xx. Zmiana języka zmienia nazwy encji.
+substitutions:
+  n_remote_event: "Zdarzenie pilota"
+  n_last_key: "Ostatni przycisk pilota"
+  n_frames_ok: "Ramki pilota odebrane"
+  n_frames_incomplete: "Ramki niepełne"
+  n_frames_foreign: "Ramki obcych pilotów"
+  n_wifi: "Sygnał Wi-Fi"
+  n_uptime: "Czas pracy"

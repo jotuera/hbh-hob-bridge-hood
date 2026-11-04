@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # the version the author's devices run – bump after testing a new ESPHome
+  ESPHOME_VERSION: "2026.10.2"
+
+jobs:
+  checks:
+    name: Languages, cards, tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Language files and card tables are complete and up to date
+        run: python3 tools/gen_card_names.py --check
+      - name: Card syntax
+        run: node --check cards/hbh-cards.js
+      - name: Python tools compile
+        run: python3 -m py_compile tools/*.py
+
+  config:
+    name: ESPHome config (all languages)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/ci.yml
+      - run: pip install "esphome==${ESPHOME_VERSION}"
+      - run: python3 tools/ci_configs.py
+      - name: Validate every device file
+        run: |
+          fail=0
+          for f in build/ci/hood_*.yaml build/ci/rx_*.yaml; do
+            if esphome -q config "$f" > /dev/null 2> err.txt; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"; cat err.txt; fail=1
+            fi
+          done
+          exit $fail
+
+  compile:
+    name: Compile ${{ matrix.device }}
+    needs: config
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [hood, rx]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/ci.yml
+      - run: pip install "esphome==${ESPHOME_VERSION}"
+      # toolchains and ESP-IDF only – a cached build directory points to paths of the previous runner
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/esphome
+          key: esphome-${{ env.ESPHOME_VERSION }}-${{ runner.os }}
+      - run: python3 tools/ci_configs.py
+      - name: Compile (English)
+        run: esphome compile build/ci/${{ matrix.device }}_en.yaml
+      - name: Firmware size
+        run: ls -l build/ci/.esphome/build/*/build/firmware.*.bin
+      - uses: actions/upload-artifact@v7
+        with:
+          name: firmware-${{ matrix.device }}-en
+          path: build/ci/.esphome/build/*/build/firmware.*.bin
+          retention-days: 14

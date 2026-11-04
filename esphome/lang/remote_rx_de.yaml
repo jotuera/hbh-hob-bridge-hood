@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – Sprachdatei für hbh-remote-rx.yaml: Deutsch
+# In packages GENAU EINE remote_rx_xx-Datei einbinden. Ein Sprachwechsel benennt die Entitäten um.
+substitutions:
+  n_remote_event: "Fernbedienungsereignis"
+  n_last_key: "Letzte Fernbedienungstaste"
+  n_frames_ok: "Empfangene Fernbedienungs-Frames"
+  n_frames_incomplete: "Unvollständige Frames"
+  n_frames_foreign: "Frames anderer Fernbedienungen"
+  n_wifi: "WLAN-Signal"
+  n_uptime: "Betriebszeit"

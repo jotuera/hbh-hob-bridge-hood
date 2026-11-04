@@ -1,0 +1,13 @@
+name: Question or idea
+description: How to set something up, which hardware to buy, an idea for HbH
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: Polish is welcome too / można pisać po polsku.
+  - type: textarea
+    id: text
+    attributes:
+      label: Question or idea
+    validations:
+      required: true

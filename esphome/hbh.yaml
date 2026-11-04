@@ -1,0 +1,745 @@
+# HbH – Hob bridge Hood: transmitter + brain (M5Stack Atom Lite + Unit RF433T, Grove: DATA -> G26)
+#
+# Acts as a second remote of the hood and as the hood's brain (hbh.h):
+#  - hood state (fan speed, light, brightness) computed from the hood's supply power,
+#  - set speed / light / brightness / colour / timer, checked against the power,
+#  - hob → hood: light when the hob is switched on, fan from the hob's power (profiles H0–H6), run-on,
+#    manual takeover, colour by time of day, hob alarm, pairing after a power cut,
+#  - drying (kitchen humid, outdoor air drier → fan 1) and a night reset of the hood relay.
+# Everything that depends on the hood (RF frame, key codes, power table) comes from a profile in profiles/.
+# Sources are Home Assistant entities chosen at runtime: device → Configuration → "Source: …",
+# then press "Apply sources (restart)". In HA enable for this device:
+# "Allow the device to perform Home Assistant actions" (hood relay on, notifications).
+#
+# Add to packages: a hood profile and a language file, e.g.
+#   profile: !include profiles/ciarko_xy8011.yaml
+#   lang: !include lang/hbh_en.yaml
+substitutions:
+  name: hbh-hood
+  friendly_name: HbH Hood
+  tx_pin: GPIO26
+  # default sources (changeable at runtime in the device's configuration)
+  src_hood_power: ""        # hood power, W (Shelly in the hood's supply) – required for the state
+  src_hood_switch: ""       # hood relay (switch.*), optional – power on, pairing after a power cut
+  src_hob_power: ""         # hob active power, W – one total entity, or phases summed: sensor.l1_power+sensor.l2_power
+  src_hob_va: ""            # hob switched ON without heating, optional: apparent power (VA) or current (A), "+" sums phases;
+                            # threshold "Hob ON threshold": about half of what the source shows after ON without heating
+                            # (3-phase AEG: ≈ 380 VA after ON → 150; a 1-phase hob shows less – look at yours)
+  src_aux1: ""              # extra source 1 (e.g. Thermomix power, W)
+  src_aux2: ""              # extra source 2 (e.g. kettle power, W, or a "heating" state)
+  src_remote: ""            # "Remote event" of hbh-remote-rx.yaml (sensor.*), optional
+  # drying (optional) – "entity" or "entity:attribute", e.g. climate.kitchen:current_temperature
+  src_room_rh: ""           # kitchen relative humidity, %
+  src_room_t: ""            # kitchen temperature, °C
+  src_out_t: ""             # outdoor temperature, °C
+  src_out_rh: ""            # outdoor relative humidity, %
+  auto_restore: RESTORE_DEFAULT_ON   # hob → hood automation on a fresh install
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  includes:
+    - hbh.h
+  on_boot:
+    # after the config entities are restored, before Home Assistant connects
+    priority: 190
+    then:
+      - lambda: |-
+          hbh::set_profile(${pw_standby}, ${pw_fan1}, ${pw_fan2}, ${pw_fan3}, ${pw_boost_min},
+                           ${pw_light1}, ${pw_light2}, ${pw_light3}, ${pw_light4},
+                           ${rf_short_frames}, ${rf_hold_frames}, ${rf_colour_frames});
+          hbh::S.today_wh = id(g_today_wh); hbh::S.day = id(g_day); hbh::S.filter_h = id(g_filter_h);
+          // a calibrated power table overrides the profile
+          if (id(g_cal_valid)) {
+            auto &c = id(g_cal);
+            hbh::set_profile(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8],
+                             ${rf_short_frames}, ${rf_hold_frames}, ${rf_colour_frames});
+          }
+          hbh::cal_store = [](const float *t, bool valid) {
+            for (int i = 0; i < 9; i++) id(g_cal)[i] = t[i];
+            id(g_cal_valid) = valid;
+          };
+          hbh::tx_send = [](const std::string &k, int n) { id(send_rf)->execute(k, n); };
+          hbh::tx_busy = []() { return id(send_rf)->is_running(); };
+          hbh::hood_power_on = []() { id(hood_power_on).execute(); };
+          hbh::hood_power_off = []() { id(hood_power_off).execute(); };
+          hbh::notify = [](const std::string &kind, float w, float m) { id(hob_alarm).execute(kind, w, m); };
+          if (id(sel_colour).has_state()) hbh::colour = id(sel_colour).current_option() == std::string("${t_cool}") ? "cool" : "warm";
+          hbh::subscribe(id(src_hood_p).state, [](const std::string &v) { hbh::on_hood_power(hbh::to_float(v)); });
+          hbh::subscribe(id(src_hood_sw).state, [](const std::string &v) { hbh::IN.hood_sw = v; });
+          // hob on 1, 2 or 3 phases: one total entity, or the phases summed with "+"
+          hbh::subscribe_sum(id(src_hob_p).state, [](float v) { hbh::on_hob_power(v); });
+          hbh::IN.has_hob_va = id(src_hob_va).state.find('.') != std::string::npos;
+          hbh::subscribe_sum(id(src_hob_va).state, [](float v) { hbh::IN.hob_va = v; });
+          hbh::subscribe(id(src_aux1).state, [](const std::string &v) { hbh::IN.aux1 = v; });
+          hbh::subscribe(id(src_aux2).state, [](const std::string &v) { hbh::IN.aux2 = v; });
+          hbh::subscribe(id(src_remote).state, [](const std::string &v) { hbh::on_remote(v); });
+          hbh::subscribe(id(src_room_rh).state, [](const std::string &v) { hbh::IN.room_rh = hbh::to_float(v); });
+          hbh::subscribe(id(src_room_t).state, [](const std::string &v) { hbh::IN.room_t = hbh::to_float(v); });
+          hbh::subscribe(id(src_out_t).state, [](const std::string &v) { hbh::IN.out_t = hbh::to_float(v); });
+          hbh::subscribe(id(src_out_rh).state, [](const std::string &v) { hbh::IN.out_rh = hbh::to_float(v); });
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret hbh_api_key
+  actions:
+    # any remote key: key = light / fan_minus / fan_plus / timer / brighter / dimmer, frames = how long (profile:
+    # rf_short_frames = a short press, rf_hold_frames = stop / boost hold, rf_colour_frames = colour hold)
+    - action: send
+      variables:
+        key: string
+        frames: int
+      then:
+        - script.execute: {id: send_rf, key: !lambda "return key;", frames: !lambda "return frames;"}
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # optional static IP (recommended when HA is in another VLAN – mDNS does not cross VLANs)
+  # manual_ip:
+  #   static_ip: 192.168.1.78
+  #   gateway: 192.168.1.1
+  #   subnet: 255.255.255.0
+  ap:
+    ssid: "${name}-fallback"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+globals:
+  # statistics kept across restarts (written to flash at most once a minute)
+  - id: g_today_wh
+    type: float
+    restore_value: true
+    initial_value: '0'
+  - id: g_day
+    type: int
+    restore_value: true
+    initial_value: '-1'
+  - id: g_filter_h
+    type: float
+    restore_value: true
+    initial_value: '0'
+  # power table measured by the calibration (net W): standby, fan 1–3, boost threshold, light 25–100 % – overrides the profile
+  - id: g_cal
+    type: std::array<float, 9>
+    restore_value: true
+  - id: g_cal_valid
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: burst_ms         # duration of the burst being sent
+    type: uint32_t
+    initial_value: '0'
+  - id: tgl              # toggle bit – flips on every press, like the remote
+    type: bool
+    initial_value: 'false'
+
+script:
+  - id: send_rf
+    mode: queued
+    max_runs: 10
+    parameters:
+      key: string
+      frames: int
+    then:
+      - light.turn_on: {id: led, brightness: 30%, red: 0%, green: 60%, blue: 100%}
+      - lambda: |-
+          static const std::map<std::string, std::string> CMD = {
+            {"light", "${key_light}"},
+            {"fan_minus", "${key_fan_minus}"},
+            {"fan_plus", "${key_fan_plus}"},
+            {"timer", "${key_timer}"},
+            {"brighter", "${key_brighter}"},
+            {"dimmer", "${key_dimmer}"},
+          };
+          auto it = CMD.find(key);
+          if (it == CMD.end()) { ESP_LOGW("rf", "unknown key %s", key.c_str()); return; }
+          std::string code = it->second;
+          id(tgl) = !id(tgl);
+          const int tb = ${rf_toggle_bit};
+          if (tb >= 0 && tb < (int) code.size()) code[tb] = id(tgl) ? '1' : '0';
+          int n = frames < 1 ? 1 : (frames > 300 ? 300 : frames);
+          // the whole burst in one buffer: frames back to back, no gaps (like the remote)
+          auto call = id(rf_tx).transmit();
+          auto *d = call.get_data();
+          d->set_carrier_frequency(0);
+          for (int r = 0; r < n; r++) {
+            for (char b : code) {
+              if (b == '1') { d->mark(${rf_one_high}); d->space(${rf_one_low}); }
+              else { d->mark(${rf_zero_high}); d->space(${rf_zero_low}); }
+            }
+            d->mark(${rf_sync_high}); d->space(${rf_sync_low});
+          }
+          call.perform();
+          // the burst runs in the background; the script waits for it
+          uint32_t frame_us = ${rf_sync_high} + ${rf_sync_low};
+          for (char b : code) frame_us += b == '1' ? ${rf_one_high} + ${rf_one_low} : ${rf_zero_high} + ${rf_zero_low};
+          id(burst_ms) = (uint32_t) ((uint64_t) n * frame_us / 1000) + 20;
+          hbh::last_tx = millis() + id(burst_ms);
+          ESP_LOGI("rf", "%s x%d toggle=%d", key.c_str(), n, (int) id(tgl));
+          // hint for the state estimator
+          const bool held = n > 3 * ${rf_short_frames};
+          if (key == "fan_plus") hbh::on_cmd(held ? "boost" : "fan_plus");
+          else if (key == "fan_minus") hbh::on_cmd(held ? "stop" : "fan_minus");
+          else if (key == "light") hbh::on_cmd(hbh::E.pl ? "light_off" : "light_on");
+          else if ((key == "brighter" || key == "dimmer") && !held) hbh::on_cmd("brightness");
+      - delay: !lambda "return id(burst_ms);"
+      - light.turn_off: led
+      # silence after every press – with no gap the hood merges two presses into one (tested 04.11)
+      - delay: 400ms
+
+  # hood relay on (any domain: switch / light / input_boolean)
+  - id: hood_power_on
+    then:
+      - if:
+          condition:
+            lambda: 'return id(src_hood_sw).state.find(".") != std::string::npos;'
+          then:
+            - homeassistant.action:
+                action: homeassistant.turn_on
+                data:
+                  entity_id: !lambda 'return id(src_hood_sw).state;'
+
+  - id: hood_power_off
+    then:
+      - if:
+          condition:
+            lambda: 'return id(src_hood_sw).state.find(".") != std::string::npos;'
+          then:
+            - homeassistant.action:
+                action: homeassistant.turn_off
+                data:
+                  entity_id: !lambda 'return id(src_hood_sw).state;'
+
+  # hob alarm: HA event esphome.hbh_alarm {kind, message, power_w, minutes} + persistent notification
+  # kind = nobody_home / too_long / end – use the event for your own phone notifications
+  - id: hob_alarm
+    parameters:
+      kind: string
+      watts: float
+      minutes: float
+    then:
+      - homeassistant.event:
+          event: esphome.hbh_alarm
+          data:
+            kind: !lambda 'return kind;'
+            message: !lambda |-
+              if (kind == "end") return std::string("");
+              char b[48]; snprintf(b, sizeof(b), " – %.0f W, %.0f min", watts, minutes);
+              return std::string(kind == "nobody_home" ? "${t_alarm_nobody}" : "${t_alarm_long}") + b;
+            power_w: !lambda 'return (int) watts;'
+            minutes: !lambda 'return (int) minutes;'
+      - if:
+          condition:
+            lambda: 'return kind != "end";'
+          then:
+            - homeassistant.action:
+                action: persistent_notification.create
+                data:
+                  notification_id: hbh_hob_alarm
+                  title: "${t_alarm_title}"
+                  message: !lambda |-
+                    char b[48]; snprintf(b, sizeof(b), " – %.0f W, %.0f min", watts, minutes);
+                    return std::string(kind == "nobody_home" ? "${t_alarm_nobody}" : "${t_alarm_long}") + b;
+          else:
+            - homeassistant.action:
+                action: persistent_notification.dismiss
+                data:
+                  notification_id: hbh_hob_alarm
+
+remote_transmitter:
+  id: rf_tx
+  pin: ${tx_pin}
+  carrier_duty_percent: 100%
+  non_blocking: true     # a 6 s colour hold would block the main loop past the task watchdog (5 s) – the script waits instead
+
+# Atom Lite RGB LED – short blue flash while transmitting
+light:
+  - platform: esp32_rmt_led_strip
+    id: led
+    name: "LED"
+    pin: GPIO27
+    num_leds: 1
+    chipset: SK6812
+    channel_colors: GRB
+    internal: true
+
+interval:
+  - interval: 200ms
+    then:
+      - lambda: |-
+          // settings -> brain
+          hbh::C.auto_on = id(sw_auto).state;
+          hbh::C.auto_light = id(sw_auto_light).state;
+          hbh::C.auto_colour = id(sw_auto_colour).state;
+          hbh::C.alarm_on = id(sw_alarm).state;
+          hbh::C.aux1_on = id(sw_aux1).state;
+          hbh::C.aux2_on = id(sw_aux2).state;
+          hbh::C.profile = id(sel_profile).active_index().value_or(5);
+          hbh::C.runon_min = id(n_runon).state;
+          hbh::C.runon_aux_min = id(n_runon_aux).state;
+          hbh::C.light_after_min = id(n_light_after).state;
+          hbh::C.p2 = id(n_p2).state;
+          hbh::C.p3 = id(n_p3).state;
+          hbh::C.alarm_min = id(n_alarm).state;
+          hbh::C.hob_on_thr = id(n_hob_on_thr).state;
+          hbh::C.aux1_thr = id(n_aux1_thr).state;
+          hbh::C.aux2_thr = id(n_aux2_thr).state;
+          hbh::C.cold_from = id(dt_cold).hour * 60 + id(dt_cold).minute;
+          hbh::C.dry_on = id(sw_dry).state;
+          hbh::C.dry_start = id(n_dry_start).state;
+          hbh::C.dry_stop = id(n_dry_stop).state;
+          hbh::C.dry_diff = id(n_dry_diff).state;
+          hbh::C.dry_max_min = id(n_dry_max).state;
+          hbh::C.dry_tmin = id(n_dry_tmin).state;
+          hbh::C.dry_from = id(dt_dry_from).hour * 60 + id(dt_dry_from).minute;
+          hbh::C.dry_to = id(dt_dry_to).hour * 60 + id(dt_dry_to).minute;
+          hbh::C.night_on = id(sw_night).state;
+          hbh::C.night_at = id(dt_night).hour * 60 + id(dt_night).minute;
+          hbh::C.warm_from = id(dt_warm).hour * 60 + id(dt_warm).minute;
+          auto tm = id(ha_time).now();
+          hbh::C.now_min = tm.is_valid() ? tm.hour * 60 + tm.minute : -1;
+          hbh::IN.home = id(ha_home).state;
+          hbh::loop();
+          hbh::loop_stats(tm.is_valid() ? tm.day_of_year : -1);
+          // statistics -> entities (and to the restored globals once a minute)
+          static uint32_t last_save = 0;
+          if (millis() - last_save > 60000) {
+            last_save = millis();
+            id(g_today_wh) = hbh::S.today_wh; id(g_day) = hbh::S.day; id(g_filter_h) = hbh::S.filter_h;
+            id(st_energy_today).publish_state(hbh::S.today_wh / 1000.0);
+            float use = id(n_filter_hours).state > 0 ? hbh::S.filter_h / id(n_filter_hours).state * 100.0f : 0;
+            id(st_filter_usage).publish_state(use);
+            id(st_filter_due).publish_state(use >= 100);
+          }
+          // calibration state and the power table in use
+          static std::string cal_last, tab_last;
+          std::string cs;
+          if (hbh::CAL.active) cs = std::string("${t_cal_running} ") + std::to_string(hbh::CAL.step + 1) + "/10";
+          else if (hbh::CAL.result == "ok") cs = "${t_cal_ok}";
+          else if (hbh::CAL.result.rfind("close:", 0) == 0) cs = std::string("${t_cal_close}") + " (" + hbh::CAL.result.substr(6) + ")";
+          else if (hbh::CAL.result == "failed") cs = "${t_cal_failed}";
+          else if (hbh::CAL.result == "aborted") cs = "${t_cal_aborted}";
+          else cs = id(g_cal_valid) ? "${t_cal_ok}" : "${t_cal_profile}";
+          if (cs != cal_last) { cal_last = cs; id(st_cal).publish_state(cs); }
+          char tb[96];
+          snprintf(tb, sizeof(tb), "%.1f | %.1f / %.1f / %.1f / %.0f+ | %.1f / %.1f / %.1f / %.1f", hbh::PW_STANDBY, hbh::W_FAN[1],
+                   hbh::W_FAN[2], hbh::W_FAN[3], hbh::PW_BOOST, hbh::LV[0], hbh::LV[1], hbh::LV[2], hbh::LV[3]);
+          if (tab_last != tb) { tab_last = tb; id(st_table).publish_state(tb); }
+          static float lk = -1;
+          if (!std::isnan(hbh::S.last_kwh) && hbh::S.last_kwh != lk) {
+            lk = hbh::S.last_kwh;
+            id(st_last_energy).publish_state(hbh::S.last_kwh);
+            id(st_last_time).publish_state(hbh::S.last_min);
+          }
+          // brain -> entities (only changes)
+          static int pb = -1, pl = -1, lvl = -1, ts = -9, tl = -9, rec = -1, tleft = -1;
+          static int got = -1, hob = -1, alarm = -1, prob = -1, busy = -1, a1 = -1, a2 = -1, dry = -1, drs = -1;
+          static float rah = -100, oah = -100, rrh = -100, rt = -100, ot = -100, orh = -100;
+          auto pubf = [](float v, float &last, esphome::sensor::Sensor *s, float step) {
+            if (std::isnan(v) ? !std::isnan(last) : (std::isnan(last) || std::fabs(v - last) >= step)) { last = v; s->publish_state(v); }
+          };
+          pubf(hbh::B.room_ah, rah, id(st_room_ah), 0.05f);
+          pubf(hbh::B.out_ah, oah, id(st_out_ah), 0.05f);
+          pubf(hbh::IN.room_rh, rrh, id(st_room_rh), 0.5f);
+          pubf(hbh::IN.room_t, rt, id(st_room_t), 0.1f);
+          pubf(hbh::IN.out_t, ot, id(st_out_t), 0.1f);
+          pubf(hbh::IN.out_rh, orh, id(st_out_rh), 0.5f);
+          if ((int) hbh::B.aux1.state != a1) { a1 = hbh::B.aux1.state; id(st_aux1).publish_state(a1); }
+          if ((int) hbh::B.aux2.state != a2) { a2 = hbh::B.aux2.state; id(st_aux2).publish_state(a2); }
+          if ((int) hbh::B.drying != dry) { dry = hbh::B.drying; id(st_drying).publish_state(dry); }
+          if (hbh::B.dry_state != drs) {
+            drs = hbh::B.dry_state;
+            static const char *const DS[3] = {"${t_dry_off}", "${t_dry_wait}", "${t_dry_run}"};
+            id(st_dry_state).publish_state(DS[drs]);
+          }
+          static float avg = -100;   // first value always published
+          static std::string code, bar;
+          static int mode = -1;
+          if (hbh::E.pb != pb) {
+            pb = hbh::E.pb; id(st_speed).publish_state(pb);
+            id(sel_speed).publish_state(pb == 4 ? std::string("${t_boost}") : std::to_string(pb));
+          }
+          int l = hbh::light_level();
+          if ((hbh::E.pl ? 1 : 0) != pl || l != lvl) {
+            pl = hbh::E.pl ? 1 : 0; lvl = l;
+            id(st_light).publish_state(pl == 1);
+            id(st_brightness).publish_state(l * 25);
+            static const char *const LO[5] = {"${t_off}", "25 %", "50 %", "75 %", "100 %"};
+            id(sel_light).publish_state(LO[l]);
+          }
+          if (hbh::target_speed != ts) { ts = hbh::target_speed; id(st_target_speed).publish_state(ts < 0 ? NAN : ts); }
+          int tlv = hbh::target_light == 9 ? (lvl > 0 ? lvl : 4) : hbh::target_light;
+          if (tlv != tl) { tl = tlv; id(st_target_brightness).publish_state(tl < 0 ? NAN : tl * 25); }
+          if (hbh::B.rec != rec) { rec = hbh::B.rec; id(st_rec).publish_state(rec); }
+          int left = hbh::timer_end ? std::max(0, (int) ((int32_t) (hbh::timer_end - millis()) / 1000)) : 0;
+          if (left != tleft) { tleft = left; id(st_timer).publish_state(left); }
+          if ((int) hbh::B.cooking != got) { got = hbh::B.cooking; id(st_cooking).publish_state(got); }
+          if ((int) hbh::B.hob_on.state != hob) { hob = hbh::B.hob_on.state; id(st_hob).publish_state(hob); }
+          if ((int) hbh::B.alarm != alarm) { alarm = hbh::B.alarm; id(st_alarm).publish_state(alarm); }
+          if ((int) hbh::rf_problem != prob) { prob = hbh::rf_problem; id(st_rf_problem).publish_state(prob); }
+          if ((int) hbh::job_active != busy) { busy = hbh::job_active; id(st_busy).publish_state(busy); }
+          if (std::fabs(hbh::B.avg2 - avg) >= 5) { avg = hbh::B.avg2; id(st_avg).publish_state(avg); }
+          char buf[24]; snprintf(buf, sizeof(buf), "%d|%d|%.1f", hbh::E.pb, hbh::E.pl ? 1 : 0, hbh::E.L);
+          if (code != buf) { code = buf; id(st_code).publish_state(buf); }
+          if (mode != hbh::B.mode) {
+            mode = hbh::B.mode;
+            static const char *const MODES[5] = {"${t_mode_off}", "${t_mode_standby}", "${t_mode_auto}", "${t_mode_manual}", "${t_mode_runon}"};
+            id(st_mode).publish_state(MODES[mode]);
+          }
+          std::string b = hbh::colour == "cool" ? "${t_cool}" : "${t_warm}";
+          if (!hbh::colour.empty() && bar != b) { bar = b; id(sel_colour).publish_state(b); }
+
+# ------------------------------------------------------------------ control (dashboard)
+select:
+  - platform: template
+    id: sel_speed
+    name: "${n_fan_speed}"
+    icon: mdi:fan
+    options: ["0", "1", "2", "3", "${t_boost}"]
+    set_action:
+      - lambda: |-
+          int i = x == "${t_boost}" ? 4 : atoi(x.c_str());
+          hbh::manual_fan();
+          hbh::request(hbh::J_SPEED, i);
+  - platform: template
+    id: sel_light
+    name: "${n_light}"
+    icon: mdi:lightbulb
+    options: ["${t_off}", "25 %", "50 %", "75 %", "100 %"]
+    set_action:
+      - lambda: |-
+          static const char *const LO[5] = {"${t_off}", "25 %", "50 %", "75 %", "100 %"};
+          int i = 0;
+          for (int k = 0; k < 5; k++) if (x == LO[k]) i = k;
+          hbh::manual_light();
+          hbh::request(hbh::J_LIGHT, i);
+  - platform: template
+    id: sel_colour
+    name: "${n_colour}"
+    icon: mdi:palette
+    options: ["${t_cool}", "${t_warm}"]
+    restore_value: true
+    optimistic: false
+    set_action:
+      - lambda: |-
+          hbh::Job j; j.type = hbh::J_COLOUR; j.arg = x == "${t_cool}" ? 0 : 1;
+          hbh::Q.push_back(j);
+  # ---------------- settings
+  - platform: template
+    id: sel_profile
+    name: "${n_profile}"
+    icon: mdi:stove
+    entity_category: config
+    options: ["H0", "H1", "H2", "H3", "H4", "H5", "H6"]
+    initial_option: "H5"
+    optimistic: true
+    restore_value: true
+
+switch:
+  - platform: template
+    id: sw_auto
+    name: "${n_auto}"
+    icon: mdi:stove
+    entity_category: config
+    optimistic: true
+    restore_mode: ${auto_restore}
+  - platform: template
+    id: sw_auto_light
+    name: "${n_auto_light}"
+    icon: mdi:lightbulb-auto
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: sw_auto_colour
+    name: "${n_auto_colour}"
+    icon: mdi:theme-light-dark
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: sw_alarm
+    name: "${n_alarm_sw}"
+    icon: mdi:fire-alert
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: sw_aux1
+    name: "${n_aux1_sw}"
+    icon: mdi:chef-hat
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: sw_dry
+    name: "${n_dry_sw}"
+    icon: mdi:water-percent
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: sw_night
+    name: "${n_night_sw}"
+    icon: mdi:power-sleep
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: sw_aux2
+    name: "${n_aux2_sw}"
+    icon: mdi:kettle-steam
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+number:
+  - {platform: template, id: n_runon, name: "${n_runon}", icon: mdi:timer-sand, entity_category: config, unit_of_measurement: min,
+     min_value: 0, max_value: 30, step: 1, initial_value: 4, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_runon_aux, name: "${n_runon_aux}", icon: mdi:timer-sand, entity_category: config, unit_of_measurement: min,
+     min_value: 0, max_value: 10, step: 1, initial_value: 2, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_light_after, name: "${n_light_after}", icon: mdi:lightbulb-off, entity_category: config, unit_of_measurement: min,
+     min_value: 0, max_value: 10, step: 1, initial_value: 2, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_p2, name: "${n_p2}", icon: mdi:flash, entity_category: config, unit_of_measurement: W,
+     min_value: 300, max_value: 4000, step: 50, initial_value: 900, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_p3, name: "${n_p3}", icon: mdi:flash, entity_category: config, unit_of_measurement: W,
+     min_value: 500, max_value: 7000, step: 50, initial_value: 1800, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_hob_on_thr, name: "${n_hob_on_thr}", icon: mdi:stove, entity_category: config,
+     min_value: 0, max_value: 3000, step: 0.1, initial_value: 150, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_filter_hours, name: "${n_filter_hours}", icon: mdi:air-filter, entity_category: config, unit_of_measurement: h,
+     min_value: 5, max_value: 200, step: 1, initial_value: 40, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_alarm, name: "${n_alarm_after}", icon: mdi:fire-alert, entity_category: config, unit_of_measurement: min,
+     min_value: 30, max_value: 300, step: 5, initial_value: 120, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_aux1_thr, name: "${n_aux1_thr}", icon: mdi:flash, entity_category: config, unit_of_measurement: W,
+     min_value: 0, max_value: 3000, step: 5, initial_value: 20, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_aux2_thr, name: "${n_aux2_thr}", icon: mdi:flash, entity_category: config, unit_of_measurement: W,
+     min_value: 0, max_value: 3000, step: 50, initial_value: 1000, optimistic: true, restore_value: true, mode: box}
+
+  - {platform: template, id: n_dry_start, name: "${n_dry_start}", icon: mdi:water-percent, entity_category: config, unit_of_measurement: "%",
+     min_value: 40, max_value: 90, step: 1, initial_value: 63, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_dry_stop, name: "${n_dry_stop}", icon: mdi:water-percent, entity_category: config, unit_of_measurement: "%",
+     min_value: 30, max_value: 85, step: 1, initial_value: 56, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_dry_diff, name: "${n_dry_diff}", icon: mdi:water-minus, entity_category: config, unit_of_measurement: "g/m³",
+     min_value: 0.5, max_value: 8, step: 0.1, initial_value: 2, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_dry_max, name: "${n_dry_max}", icon: mdi:timer-sand, entity_category: config, unit_of_measurement: min,
+     min_value: 10, max_value: 240, step: 5, initial_value: 60, optimistic: true, restore_value: true, mode: box}
+  - {platform: template, id: n_dry_tmin, name: "${n_dry_tmin}", icon: mdi:thermometer, entity_category: config, unit_of_measurement: "°C",
+     min_value: -20, max_value: 20, step: 1, initial_value: 0, optimistic: true, restore_value: true, mode: box}
+
+datetime:
+  - {platform: template, id: dt_dry_from, type: time, name: "${n_dry_from}", icon: mdi:clock-start, entity_category: config,
+     optimistic: true, restore_value: true, initial_value: "08:00:00"}
+  - {platform: template, id: dt_dry_to, type: time, name: "${n_dry_to}", icon: mdi:clock-end, entity_category: config,
+     optimistic: true, restore_value: true, initial_value: "22:00:00"}
+  - {platform: template, id: dt_night, type: time, name: "${n_night_at}", icon: mdi:power-sleep, entity_category: config,
+     optimistic: true, restore_value: true, initial_value: "01:00:00"}
+  - {platform: template, id: dt_cold, type: time, name: "${n_cool_from}", icon: mdi:snowflake, entity_category: config,
+     optimistic: true, restore_value: true, initial_value: "06:00:00"}
+  - {platform: template, id: dt_warm, type: time, name: "${n_warm_from}", icon: mdi:fire, entity_category: config,
+     optimistic: true, restore_value: true, initial_value: "17:00:00"}
+
+# ------------------------------------------------------------------ sources (Home Assistant entities)
+text:
+  - {platform: template, id: src_hood_p, name: "${n_src_hood_power}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_hood_power}"}
+  - {platform: template, id: src_hood_sw, name: "${n_src_hood_switch}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_hood_switch}"}
+  - {platform: template, id: src_hob_p, name: "${n_src_hob_power}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_hob_power}"}
+  - {platform: template, id: src_hob_va, name: "${n_src_hob_va}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_hob_va}"}
+  - {platform: template, id: src_aux1, name: "${n_src_aux1}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_aux1}"}
+  - {platform: template, id: src_aux2, name: "${n_src_aux2}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_aux2}"}
+  - {platform: template, id: src_room_rh, name: "${n_src_room_rh}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_room_rh}"}
+  - {platform: template, id: src_room_t, name: "${n_src_room_t}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_room_t}"}
+  - {platform: template, id: src_out_t, name: "${n_src_out_t}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_out_t}"}
+  - {platform: template, id: src_out_rh, name: "${n_src_out_rh}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_out_rh}"}
+  - {platform: template, id: src_remote, name: "${n_src_remote}", icon: mdi:import, entity_category: config,
+     mode: text, max_length: 255, optimistic: true, restore_value: true, initial_value: "${src_remote}"}
+
+binary_sensor:
+  - {platform: template, id: st_light, name: "${n_light_on}", icon: mdi:lightbulb}
+  - {platform: template, id: st_hob, name: "${n_hob_on}", device_class: power, icon: mdi:stove}
+  - {platform: template, id: st_cooking, name: "${n_cooking}", device_class: running, icon: mdi:pot-steam}
+  - {platform: template, id: st_alarm, name: "${n_alarm}", device_class: problem, icon: mdi:fire-alert}
+  - {platform: template, id: st_rf_problem, name: "${n_rf_problem}", device_class: problem, icon: mdi:access-point-off, entity_category: diagnostic}
+  - {platform: template, id: st_aux1, name: "${n_aux1_on}", device_class: running, icon: mdi:chef-hat}
+  - {platform: template, id: st_aux2, name: "${n_aux2_on}", device_class: running, icon: mdi:kettle-steam}
+  - {platform: template, id: st_drying, name: "${n_drying}", device_class: running, icon: mdi:water-percent}
+  - {platform: template, id: st_filter_due, name: "${n_filter_due}", device_class: problem, icon: mdi:air-filter}
+  - {platform: template, id: st_busy, name: "${n_busy}", icon: mdi:progress-clock, entity_category: diagnostic}
+
+text_sensor:
+  - {platform: template, id: st_code, name: "${n_state_code}", icon: mdi:range-hood, entity_category: diagnostic}
+  - {platform: template, id: st_mode, name: "${n_mode}", icon: mdi:robot}
+  - {platform: template, id: st_cal, name: "${n_cal_state}", icon: mdi:tune-vertical, entity_category: diagnostic}
+  - {platform: template, id: st_table, name: "${n_power_table}", icon: mdi:table, entity_category: diagnostic}
+  - {platform: template, id: st_dry_state, name: "${n_dry_state}", icon: mdi:water-percent}
+
+sensor:
+  # people at home (hob alarm "nobody home"); also enables runtime subscriptions to HA states
+  - platform: homeassistant
+    id: ha_home
+    entity_id: zone.home
+    internal: true
+  - {platform: template, id: st_speed, name: "${n_speed}", icon: mdi:fan, accuracy_decimals: 0}
+  - {platform: template, id: st_brightness, name: "${n_brightness}", icon: mdi:brightness-percent, unit_of_measurement: "%", accuracy_decimals: 0}
+  - {platform: template, id: st_target_speed, name: "${n_target_speed}", icon: mdi:fan-clock, accuracy_decimals: 0}
+  - {platform: template, id: st_target_brightness, name: "${n_target_brightness}", icon: mdi:brightness-percent, unit_of_measurement: "%", accuracy_decimals: 0}
+  - {platform: template, id: st_rec, name: "${n_recommended}", icon: mdi:fan-auto, accuracy_decimals: 0}
+  - {platform: template, id: st_timer, name: "${n_timer_left}", icon: mdi:timer-outline, unit_of_measurement: s, accuracy_decimals: 0}
+  - {platform: template, id: st_avg, name: "${n_hob_avg}", icon: mdi:flash, unit_of_measurement: W, accuracy_decimals: 0, device_class: power}
+  - {platform: template, id: st_room_ah, name: "${n_room_ah}", icon: mdi:water, unit_of_measurement: "g/m³", accuracy_decimals: 1, state_class: measurement}
+  - {platform: template, id: st_out_ah, name: "${n_out_ah}", icon: mdi:water-outline, unit_of_measurement: "g/m³", accuracy_decimals: 1, state_class: measurement}
+  - {platform: template, id: st_room_rh, name: "${n_room_rh}", device_class: humidity, unit_of_measurement: "%", accuracy_decimals: 0}
+  - {platform: template, id: st_room_t, name: "${n_room_t}", device_class: temperature, unit_of_measurement: "°C", accuracy_decimals: 1}
+  - {platform: template, id: st_out_t, name: "${n_out_t}", device_class: temperature, unit_of_measurement: "°C", accuracy_decimals: 1}
+  - {platform: template, id: st_out_rh, name: "${n_out_rh}", device_class: humidity, unit_of_measurement: "%", accuracy_decimals: 0}
+  - {platform: template, id: st_energy_today, name: "${n_hob_energy_today}", device_class: energy, state_class: total_increasing,
+     unit_of_measurement: kWh, accuracy_decimals: 3, icon: mdi:lightning-bolt}
+  - {platform: template, id: st_last_energy, name: "${n_last_cook_energy}", device_class: energy, unit_of_measurement: kWh,
+     accuracy_decimals: 3, icon: mdi:pot-steam}
+  - {platform: template, id: st_last_time, name: "${n_last_cook_time}", device_class: duration, unit_of_measurement: min,
+     accuracy_decimals: 0, icon: mdi:timer-outline}
+  - {platform: template, id: st_filter_usage, name: "${n_filter_usage}", unit_of_measurement: "%", accuracy_decimals: 0,
+     state_class: measurement, icon: mdi:air-filter}
+  - platform: wifi_signal
+    name: "${n_wifi}"
+    update_interval: 60s
+  - platform: uptime
+    name: "${n_uptime}"
+
+button:
+  - platform: restart
+    name: "${n_apply}"
+    icon: mdi:restart
+    entity_category: config
+  - platform: template
+    id: light_on_btn
+    name: "${n_light_on_btn}"
+    icon: mdi:lightbulb-on
+    on_press:
+      - lambda: 'hbh::manual_light(); hbh::request(hbh::J_LIGHT, 9);'
+  - platform: template
+    id: light_off_btn
+    name: "${n_light_off_btn}"
+    icon: mdi:lightbulb-off
+    on_press:
+      - lambda: 'hbh::manual_light(); hbh::request(hbh::J_LIGHT, 0);'
+  - platform: template
+    id: cal_start
+    name: "${n_cal_start}"
+    icon: mdi:tune-vertical
+    entity_category: config
+    on_press:
+      - lambda: 'hbh::cal_start();'
+  - platform: template
+    id: cal_reset
+    name: "${n_cal_reset}"
+    icon: mdi:backup-restore
+    entity_category: config
+    on_press:
+      - lambda: |-
+          id(g_cal_valid) = false;
+          hbh::set_profile(${pw_standby}, ${pw_fan1}, ${pw_fan2}, ${pw_fan3}, ${pw_boost_min},
+                           ${pw_light1}, ${pw_light2}, ${pw_light3}, ${pw_light4},
+                           ${rf_short_frames}, ${rf_hold_frames}, ${rf_colour_frames});
+          hbh::CAL.result = "";
+  - platform: template
+    id: filter_clean
+    name: "${n_filter_clean}"
+    icon: mdi:air-filter
+    entity_category: config
+    on_press:
+      - lambda: |-
+          hbh::S.filter_h = 0; id(g_filter_h) = 0;
+          id(st_filter_usage).publish_state(0);
+          id(st_filter_due).publish_state(false);
+  - platform: template
+    id: timer_10
+    name: "${n_timer10}"
+    icon: mdi:timer-outline
+    on_press:
+      - lambda: 'hbh::Job j; j.type = hbh::J_TIMER; hbh::Q.push_back(j);'
+  - platform: template
+    id: key_fan_plus
+    name: "${n_key_fan_plus}"
+    icon: mdi:fan-plus
+    on_press:
+      - script.execute: {id: send_rf, key: "fan_plus", frames: "${rf_short_frames}"}
+  - platform: template
+    id: key_fan_minus
+    name: "${n_key_fan_minus}"
+    icon: mdi:fan-minus
+    on_press:
+      - script.execute: {id: send_rf, key: "fan_minus", frames: "${rf_short_frames}"}
+  - platform: template
+    id: key_stop
+    name: "${n_key_stop}"
+    icon: mdi:fan-off
+    on_press:
+      - script.execute: {id: send_rf, key: "fan_minus", frames: "${rf_hold_frames}"}
+  - platform: template
+    id: key_boost
+    name: "${n_key_boost}"
+    icon: mdi:fan-speed-3
+    on_press:
+      - script.execute: {id: send_rf, key: "fan_plus", frames: "${rf_hold_frames}"}
+  - platform: template
+    id: key_light
+    name: "${n_key_light}"
+    icon: mdi:lightbulb
+    on_press:
+      - script.execute: {id: send_rf, key: "light", frames: "${rf_short_frames}"}
+  - platform: template
+    id: key_brighter
+    name: "${n_key_brighter}"
+    icon: mdi:brightness-7
+    on_press:
+      - script.execute: {id: send_rf, key: "brighter", frames: "${rf_short_frames}"}
+  - platform: template
+    id: key_dimmer
+    name: "${n_key_dimmer}"
+    icon: mdi:brightness-5
+    on_press:
+      - script.execute: {id: send_rf, key: "dimmer", frames: "${rf_short_frames}"}
+  - platform: template
+    id: key_cooler
+    name: "${n_key_cooler}"
+    icon: mdi:snowflake
+    on_press:
+      - script.execute: {id: send_rf, key: "brighter", frames: "${rf_colour_frames}"}
+  - platform: template
+    id: key_warmer
+    name: "${n_key_warmer}"
+    icon: mdi:fire
+    on_press:
+      - script.execute: {id: send_rf, key: "dimmer", frames: "${rf_colour_frames}"}
+  - platform: template
+    id: key_timer
+    name: "${n_key_timer}"
+    icon: mdi:timer-outline
+    on_press:
+      - script.execute: {id: send_rf, key: "timer", frames: "${rf_short_frames}"}

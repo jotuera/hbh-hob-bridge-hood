@@ -1,0 +1,18 @@
+HbH – Hob bridge Hood (hbh-hob-bridge-hood)
+Required Notice: Copyright (c) 2026 JoTu (https://github.com/jotuera)
+Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE): free for personal and other
+noncommercial use. Commercial use (installers, resellers, companies) needs a separate license from the author.
+
+All firmware, Home Assistant configuration and tools were written for this project. The RF protocol
+facts (frame layout, timing, key codes, toggle bit, hold behaviour) come from the author's own captures
+of the Ciarko Duo 74 remote (Broadlink, RTL-SDR / rtl_433 and the ESP receiver) and were cross-checked
+against the following MIT-licensed project, which is gratefully acknowledged:
+
+- ciarko-hood-433-esphome - Copyright (c) 2026 Adam Węglarz - MIT
+  https://github.com/AdamWeglarz/ciarko-hood-433-esphome
+  (ideas: flip the toggle bit on every transmitted press, send the whole burst back to back in one
+  transmit buffer; codes of the XY8011-RF remote of a Ciarko SU Mini used to confirm that the key codes
+  are shared between remotes)
+
+Ciarko, AEG, Electrolux, Hob²Hood, Thermomix, Shelly, M5Stack and Broadlink are trademarks of their respective owners.
+This project is not affiliated with or endorsed by any of them.

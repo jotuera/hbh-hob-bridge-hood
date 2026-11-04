@@ -1,0 +1,61 @@
+name: New hood profile
+description: Your hood works with HbH – share its profile so it works in more kitchens
+title: "Profile: <brand> <model> (<remote>)"
+labels: [profile]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you! A profile is one file in `esphome/profiles/` – see *Hood profiles* in the README.
+        Polish is welcome too / można pisać po polsku.
+
+        **Never paste** `secrets.yaml`, API keys or Wi-Fi passwords.
+  - type: input
+    id: hood
+    attributes:
+      label: Hood
+      description: Brand and model as on the rating plate
+      placeholder: Ciarko Duo 74
+    validations:
+      required: true
+  - type: input
+    id: remote
+    attributes:
+      label: Remote
+      description: Model printed on the remote or its PCB, and the frequency
+      placeholder: XY8011-RF, 433.92 MHz
+    validations:
+      required: true
+  - type: textarea
+    id: profile
+    attributes:
+      label: Profile file
+      description: Your copy of the profile with the learned key_* lines (from `tools/learn_codes.py`) and the RF frame
+      render: yaml
+    validations:
+      required: true
+  - type: input
+    id: power_table
+    attributes:
+      label: Power table from the calibration
+      description: State of the *Power table* sensor after *Calibrate hood* (and the *Calibration* result)
+      placeholder: "0.4 | 4.6 / 10.2 / 29.6 / 129+ | 3.3 / 6.2 / 9.1 / 11.7 – Calibrated"
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What works
+      options:
+        - label: Fan speeds up and down, stop
+        - label: Boost
+        - label: Light on / off and brightness
+        - label: Colour (cooler / warmer)
+        - label: Timer
+        - label: The receiver recognises every key of the original remote
+        - label: The hood follows the hob (cooking → fan, run-on → off)
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything different from the Ciarko profile – other keys, a key that must be held, pairing, quirks

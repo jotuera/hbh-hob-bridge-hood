@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – jazykový soubor pro hbh-remote-rx.yaml: čeština
+# V packages vložte PRÁVĚ JEDEN soubor remote_rx_xx. Změna jazyka přejmenuje entity.
+substitutions:
+  n_remote_event: "Událost dálkového ovladače"
+  n_last_key: "Poslední tlačítko ovladače"
+  n_frames_ok: "Přijaté rámce ovladače"
+  n_frames_incomplete: "Neúplné rámce"
+  n_frames_foreign: "Rámce cizích ovladačů"
+  n_wifi: "Signál Wi-Fi"
+  n_uptime: "Doba provozu"

@@ -1,0 +1,12 @@
+# local secrets (copy secrets.yaml.example)
+secrets.yaml
+
+# ESPHome build output
+.esphome/
+*.bin
+
+# Python caches
+__pycache__/
+
+# CI device files (tools/ci_configs.py)
+build/

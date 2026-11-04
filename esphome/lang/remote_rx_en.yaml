@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – language file for hbh-remote-rx.yaml: English
+# Include exactly ONE remote_rx_xx file in packages. Changing the language renames the entities.
+substitutions:
+  n_remote_event: "Remote event"
+  n_last_key: "Last remote key"
+  n_frames_ok: "Remote frames received"
+  n_frames_incomplete: "Incomplete frames"
+  n_frames_foreign: "Frames of other remotes"
+  n_wifi: "Wi-Fi signal"
+  n_uptime: "Uptime"

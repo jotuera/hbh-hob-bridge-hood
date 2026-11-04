@@ -1,0 +1,44 @@
+# HbH – hood profile: Ciarko, remote family XY8011-RF (tested: Ciarko Duo 74; same key codes: Ciarko SU Mini)
+#
+# A profile holds everything that depends on the hood: the RF frame, the codes of the remote's keys and the hood's
+# power table. Include exactly ONE profile in packages. Protocol notes: docs/profiles/ciarko_xy8011.md
+#
+# Your own remote of this family: flash hbh-remote-rx.yaml, press the keys and let tools/learn_codes.py write the
+# key_* lines (each remote has its own 16-bit ID and check byte, so codes cannot be computed).
+substitutions:
+  profile_name: "Ciarko XY8011-RF"
+
+  # ---- RF frame: OOK at 433.92 MHz, PWM bits, frame = rf_frame_bits bits + a sync (frame end), µs
+  rf_one_high: "790"
+  rf_one_low: "263"
+  rf_zero_high: "263"
+  rf_zero_low: "790"
+  rf_sync_high: "1710"
+  rf_sync_low: "4900"
+  rf_frame_bits: "36"
+  rf_toggle_bit: "32"        # index of the bit that flips on every press (-1 = the remote has none)
+  rf_short_frames: "8"       # a short press
+  rf_hold_frames: "60"       # ~2.7 s hold: stop (fan −) / boost (fan +)
+  rf_colour_frames: "140"    # ~6 s hold: colour to the end of the scale (brighter = cooler, dimmer = warmer)
+
+  # ---- keys: full frames (the value of the toggle bit does not matter).
+  # EXAMPLE codes: remote ID 0x1234 and check byte 00000000 are placeholders – no real remote sends these frames.
+  # The key bytes (0x18, 0x50, …) are the same on every remote of this family. Learn YOUR codes with
+  # tools/learn_codes.py and put the key_* lines into the substitutions of your device file (they override these).
+  key_light: "000100100011010000011000000000000010"       # 0x18 light on / off
+  key_fan_minus: "000100100011010001010000000000000010"   # 0x50 fan −  (hold ~2 s = stop)
+  key_fan_plus: "000100100011010011111101000000001010"    # 0xFD fan +  (from 3 = boost)
+  key_timer: "000100100011010011111110000000001010"       # 0xFE timer (~10 min)
+  key_brighter: "000100100011010000010001000000001010"    # 0x11 brighter (hold ≥ 3 s = cooler colour)
+  key_dimmer: "000100100011010000001011000000000010"      # 0x0B dimmer   (hold ≥ 3 s = warmer colour)
+
+  # ---- power table, net W above standby (Ciarko Duo 74, Shelly Plus 1PM, 07.10 / 14.10.2026)
+  pw_standby: "0.5"
+  pw_fan1: "4.4"
+  pw_fan2: "10.0"
+  pw_fan3: "27.5"
+  pw_boost_min: "100"        # boost draws 100–170 W
+  pw_light1: "3.2"           # 25 %
+  pw_light2: "6.3"           # 50 %
+  pw_light3: "8.9"           # 75 %
+  pw_light4: "11.9"          # 100 %

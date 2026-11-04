@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – fichier de langue pour hbh-remote-rx.yaml : français
+# Incluez EXACTEMENT UN fichier remote_rx_xx dans packages. Changer de langue renomme les entités.
+substitutions:
+  n_remote_event: "Événement télécommande"
+  n_last_key: "Dernière touche télécommande"
+  n_frames_ok: "Trames télécommande reçues"
+  n_frames_incomplete: "Trames incomplètes"
+  n_frames_foreign: "Trames d'autres télécommandes"
+  n_wifi: "Signal Wi-Fi"
+  n_uptime: "Temps de fonctionnement"

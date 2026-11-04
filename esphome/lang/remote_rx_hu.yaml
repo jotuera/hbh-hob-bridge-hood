@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – nyelvi fájl a hbh-remote-rx.yaml-hez: magyar
+# A packages-be PONTOSAN EGY remote_rx_xx fájlt vegyél fel. A nyelv módosítása átnevezi az entitásokat.
+substitutions:
+  n_remote_event: "Távirányító esemény"
+  n_last_key: "Utolsó távirányító gomb"
+  n_frames_ok: "Fogadott távirányító keretek"
+  n_frames_incomplete: "Hiányos keretek"
+  n_frames_foreign: "Idegen távirányítók keretei"
+  n_wifi: "Wi-Fi jel"
+  n_uptime: "Üzemidő"

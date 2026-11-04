@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – taalbestand voor hbh-remote-rx.yaml: Nederlands
+# Neem PRECIES ÉÉN remote_rx_xx-bestand op in packages. Een andere taal hernoemt de entiteiten.
+substitutions:
+  n_remote_event: "Gebeurtenis afstandsbediening"
+  n_last_key: "Laatste toets afstandsbediening"
+  n_frames_ok: "Ontvangen frames afstandsbediening"
+  n_frames_incomplete: "Onvolledige frames"
+  n_frames_foreign: "Frames van andere afstandsbedieningen"
+  n_wifi: "Wifi-signaal"
+  n_uptime: "Bedrijfstijd"

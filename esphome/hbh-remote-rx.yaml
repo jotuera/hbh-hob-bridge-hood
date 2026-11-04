@@ -1,0 +1,241 @@
+# HbH – Hob bridge Hood: receiver for the ORIGINAL remote (M5Stack Atom Lite + Unit RF433R)
+#
+# !!! The RF433R outputs its data on G32 (the other Grove wire), not on G26 like the RF433T. !!!
+#
+# Decodes the remote's frames with the hood profile (RF frame + key codes) and, when a key is released, sends the
+# Home Assistant event esphome.hbh_remote {key, frames, held_ms}; frames = number of frames, held_ms = how long the
+# key was held. key = light / fan_minus / fan_plus / timer / brighter / dimmer. The toggle bit is ignored for
+# recognition; a change of the toggle bit = a new press.
+#
+# The same press is also published as the text sensor "Remote event" = "seq|key|frames|held_ms" – set it as
+# "Source: remote receiver" of hbh.yaml, so the brain knows when someone used the remote (it ignores the echo of
+# its own transmitter).
+#
+# Frames that match no key of the profile are counted and logged (INFO "unknown frame: <bits>") –
+# tools/learn_codes.py turns them into the key_* lines of a profile.
+#
+# In HA: Settings → Devices & services → ESPHome → this device → Configure →
+# enable "Allow the device to perform Home Assistant actions", otherwise no events arrive.
+#
+# Add to packages: the same hood profile as hbh.yaml and a language file, e.g.
+#   profile: !include profiles/ciarko_xy8011.yaml
+#   lang: !include lang/remote_rx_en.yaml
+substitutions:
+  name: hbh-remote-rx
+  friendly_name: HbH Remote RX
+  rx_pin: GPIO32
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret hbh_remote_rx_api_key
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # manual_ip:
+  #   static_ip: 192.168.1.79
+  #   gateway: 192.168.1.1
+  #   subnet: 255.255.255.0
+  ap:
+    ssid: "${name}-fallback"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+globals:
+  - id: g_cmd
+    type: std::string
+    initial_value: '""'
+  - id: g_frames
+    type: int
+    initial_value: '0'
+  - id: g_start
+    type: uint32_t
+    initial_value: '0'
+  - id: g_last
+    type: uint32_t
+    initial_value: '0'
+  - id: cnt_ok
+    type: uint32_t
+    initial_value: '0'
+  - id: cnt_incomplete
+    type: uint32_t
+    initial_value: '0'
+  - id: cnt_foreign
+    type: uint32_t
+    initial_value: '0'
+
+script:
+  - id: report
+    parameters:
+      key: string
+      frames: int
+      held_ms: int
+    then:
+      - homeassistant.event:
+          event: esphome.hbh_remote
+          data:
+            key: !lambda "return key;"
+            frames: !lambda "return frames;"
+            held_ms: !lambda "return held_ms;"
+      - text_sensor.template.publish:
+          id: last_key
+          state: !lambda 'return key + " ×" + to_string(frames);'
+      # for the brain of hbh.yaml: "seq|key|frames|held_ms" (seq makes every press a new state)
+      - lambda: |-
+          static uint32_t seq = 0;
+          seq++;
+          id(remote_event).publish_state(to_string(seq) + "|" + key + "|" + to_string(frames) + "|" + to_string(held_ms));
+      - light.turn_on: {id: led, brightness: 30%, red: 100%, green: 40%, blue: 0%}
+      - delay: 150ms
+      - light.turn_off: led
+
+remote_receiver:
+  pin:
+    number: ${rx_pin}
+    inverted: false
+  tolerance: 30%
+  filter: 120us
+  idle: 3ms           # < frame-end LOW (4.9 ms): every packet ends with the sync HIGH
+  buffer_size: 4kb
+  # no dump: raw – the receiver outputs noise all the time and would flood the log/API
+  on_raw:
+    then:
+      - lambda: |-
+          static const std::map<std::string, std::string> CMD = {
+                {"${key_light}", "light"},
+                {"${key_fan_minus}", "fan_minus"},
+                {"${key_fan_plus}", "fan_plus"},
+                {"${key_timer}", "timer"},
+                {"${key_brighter}", "brighter"},
+                {"${key_dimmer}", "dimmer"},
+          };
+          // frame of the profile: NB bits (HIGH, LOW) followed by the frame-end pulse (sync HIGH)
+          const int NB = ${rf_frame_bits}, TB = ${rf_toggle_bit}, SH = ${rf_sync_high};
+          const int H1 = ${rf_one_high}, L1 = ${rf_one_low}, H0 = ${rf_zero_high}, L0 = ${rf_zero_low};
+          const int PMIN = std::min(std::min(H1, L1), std::min(H0, L0)) * 45 / 100;
+          const int PMAX = std::max(std::max(H1, L1), std::max(H0, L0)) * 3 / 2;
+          // find the frame-end pulse; the 2·NB durations before it are the bits. Noise can contain a fake
+          // candidate, so try all of them.
+          std::string bits;
+          bool candidate = false, ok = false;
+          for (int sync = 2 * NB; sync < (int) x.size() && !ok; sync++) {
+            if (x[sync] < SH * 7 / 10 || x[sync] > SH * 135 / 100) continue;
+            candidate = true;
+            bits.clear();
+            int i = sync - 2 * NB;
+            for (; i < sync; i += 2) {
+              int h = x[i], l = -x[i + 1];
+              if (h < PMIN || h > PMAX || l < PMIN || l > PMAX) break;
+              bits += (std::abs(h - H1) + std::abs(l - L1) < std::abs(h - H0) + std::abs(l - L0)) ? '1' : '0';
+            }
+            ok = (i >= sync);
+          }
+          if (!ok) { if (candidate) id(cnt_incomplete)++; return; }
+          // the toggle bit flips on every press – ignore it for recognition
+          char tgl = (TB >= 0 && TB < NB) ? bits[TB] : '0';
+          std::string norm = bits;
+          if (TB >= 0 && TB < NB) norm[TB] = '0';
+          std::string cmd;
+          for (auto &p : CMD) { std::string k = p.first; if (TB >= 0 && TB < (int) k.size()) k[TB] = '0'; if (k == norm) { cmd = p.second; break; } }
+          if (cmd.empty()) {
+            id(cnt_foreign)++;
+            static uint32_t t_unknown = 0;
+            if (millis() - t_unknown > 300) { t_unknown = millis(); ESP_LOGI("rx", "unknown frame: %s", bits.c_str()); }
+            return;
+          }
+          uint32_t now = millis();
+          static char g_tgl = 0;
+          bool same_press = (cmd == id(g_cmd) && tgl == g_tgl && now - id(g_last) < 300);
+          g_tgl = tgl;
+          if (same_press) {
+            id(g_frames)++;
+          } else {
+            if (id(g_frames) > 0) id(report).execute(id(g_cmd), id(g_frames), (int) (id(g_last) - id(g_start)) + (int) ((${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_sync_high} + ${rf_sync_low}) / 1000));
+            id(g_cmd) = cmd; id(g_frames) = 1; id(g_start) = now;
+          }
+          id(g_last) = now;
+          id(cnt_ok)++;
+
+interval:
+  # counters to HA every 5 s (not on every noise packet)
+  - interval: 5s
+    then:
+      - lambda: |-
+          if (id(frames_ok).state != id(cnt_ok)) id(frames_ok).publish_state(id(cnt_ok));
+          if (id(frames_incomplete).state != id(cnt_incomplete)) id(frames_incomplete).publish_state(id(cnt_incomplete));
+          if (id(frames_foreign).state != id(cnt_foreign)) id(frames_foreign).publish_state(id(cnt_foreign));
+  # key released = no frames for > 250 ms -> report
+  - interval: 50ms
+    then:
+      - lambda: |-
+          if (id(g_frames) > 0 && millis() - id(g_last) > 250) {
+            id(report).execute(id(g_cmd), id(g_frames), (int) (id(g_last) - id(g_start)) + (int) ((${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_sync_high} + ${rf_sync_low}) / 1000));
+            id(g_frames) = 0; id(g_cmd) = "";
+          }
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: led
+    name: "LED"
+    pin: GPIO27
+    num_leds: 1
+    chipset: SK6812
+    channel_colors: GRB
+    internal: true
+
+text_sensor:
+  - platform: template
+    id: remote_event
+    name: "${n_remote_event}"
+    icon: mdi:remote
+    entity_category: diagnostic
+  - platform: template
+    id: last_key
+    name: "${n_last_key}"
+    icon: mdi:remote
+
+sensor:
+  - platform: template
+    id: frames_ok
+    name: "${n_frames_ok}"
+    icon: mdi:counter
+    accuracy_decimals: 0
+    lambda: "return 0;"
+    update_interval: never
+  - platform: template
+    id: frames_incomplete
+    name: "${n_frames_incomplete}"
+    icon: mdi:counter
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    lambda: "return 0;"
+    update_interval: never
+  - platform: template
+    id: frames_foreign
+    name: "${n_frames_foreign}"
+    icon: mdi:counter
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    lambda: "return 0;"
+    update_interval: never
+  - platform: wifi_signal
+    name: "${n_wifi}"
+    update_interval: 60s
+  - platform: uptime
+    name: "${n_uptime}"

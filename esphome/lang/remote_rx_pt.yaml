@@ -1,0 +1,10 @@
+# HbH – Hob bridge Hood – ficheiro de idioma para hbh-remote-rx.yaml: português
+# Inclua exatamente UM só ficheiro remote_rx_xx em packages. Mudar o idioma muda o nome das entidades.
+substitutions:
+  n_remote_event: "Evento do comando"
+  n_last_key: "Última tecla do comando"
+  n_frames_ok: "Tramas do comando recebidas"
+  n_frames_incomplete: "Tramas incompletas"
+  n_frames_foreign: "Tramas de outros comandos"
+  n_wifi: "Sinal Wi-Fi"
+  n_uptime: "Tempo de funcionamento"
