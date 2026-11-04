@@ -32,6 +32,18 @@ evening. Local, no cloud, no YAML automations – all settings are entities of t
 | **Shelly Pro 3EM** / Pro EM-50 / EM Gen3 on the hob (optional) | hob power, 1–3 phases | hob switched on, cooking, 2-min average, alarm |
 | **Cards** (`cards/hbh-cards.js`) | three Lovelace cards, no other custom cards needed | control, hob automation with profiles H0–H6, drying |
 
+<table>
+<tr>
+<td rowspan="2" valign="top"><img src="docs/img/card-control-en.png" width="280" alt="Control card"></td>
+<td valign="top"><img src="docs/img/card-automation-en.png" width="540" alt="Hood follows the hob"></td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/img/card-drying-en.png" width="540" alt="Hood drying"></td>
+</tr>
+</table>
+
+<sub>The three cards in the author's kitchen: control (hob tile with today's energy, hood state from the power reading), hob → hood automation with profiles H0–H6, drying by absolute humidity.</sub>
+
 ## Hood profiles
 
 Everything that depends on the hood lives in one file in `esphome/profiles/`: the RF frame (bit timing, frame length,

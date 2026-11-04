@@ -31,6 +31,18 @@ ciepłe. Lokalnie, bez chmury, bez automatyzacji w YAML – wszystkie ustawienia
 | **Shelly Pro 3EM** / Pro EM-50 / EM Gen3 na płycie (opcja) | moc płyty, 1–3 fazy | płyta włączona, gotowanie, średnia 2 min, alarm |
 | **Karty** (`cards/hbh-cards.js`) | trzy karty Lovelace, bez innych kart | sterowanie, automatyka płyty z profilami H0–H6, osuszanie |
 
+<table>
+<tr>
+<td rowspan="2" valign="top"><img src="docs/img/card-control-pl.png" width="280" alt="Karta sterowania"></td>
+<td valign="top"><img src="docs/img/card-automation-pl.png" width="540" alt="Okap za płytą"></td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/img/card-drying-pl.png" width="540" alt="Osuszanie okapem"></td>
+</tr>
+</table>
+
+<sub>Trzy karty w kuchni autora: sterowanie (kafel płyty z dzisiejszą energią, stan okapu z poboru mocy), automatyka płyta → okap z profilami H0–H6, osuszanie według wilgotności bezwzględnej.</sub>
+
 ## Profile okapów
 
 Wszystko, co zależy od okapu, jest w jednym pliku w `esphome/profiles/`: ramka radiowa (czasy bitów, długość ramki,
