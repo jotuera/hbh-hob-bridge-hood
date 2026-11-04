@@ -6,6 +6,12 @@
   twice); the hood ESP keeps the codes and sends them instead of the profile's – no YAML, no re-flashing. The
   receiver now reports presses of an unknown remote too (`key: unknown` with the frame bits), and the hood ESP
   recognises the keys by the learned codes (new sensor *Remote key*). Cards 0.8.0.
+- **Frame formats and key layouts**: profiles set `rf_bit_order` (`hl` mark-space + sync, PT2262 / Ciarko; `lh`
+  start pulse + space-mark, CAME) and `rf_start_high`; frames of 12 and 18 bits in one profile; optional keys
+  `light_on`, `light_off`, `fan_off`, `power` (stop and the light use them when the remote has them);
+  `rf_learn_keys` sets the keys of the wizard. Profiles must now define all `key_*` (`""` = no such key).
+- **New profiles (untested on hoods)**: Elica CAME 18-bit, Novy 840029, Luxair, Zephyr (315 MHz) – from published
+  captures; the receiver's decoder was checked against raw Elica captures.
 
 ## 0.1.0-beta – 2026-11-04
 

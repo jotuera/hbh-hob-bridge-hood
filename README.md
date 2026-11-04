@@ -46,18 +46,29 @@ evening. Local, no cloud, no YAML automations – all settings are entities of t
 
 ## Hood profiles
 
-Everything that depends on the hood lives in one file in `esphome/profiles/`: the RF frame (bit timing, frame length,
-toggle bit), the codes of the remote's keys and the hood's power table. Include one profile in the packages of both
-devices.
+Everything that depends on the hood lives in one file in `esphome/profiles/`: the RF frame (format, bit timing,
+frame length, toggle bit), the codes of the remote's keys and the hood's power table. Include one profile in the
+packages of both devices. Many hood brands share one remote with other codes (the address of the remote): the
+profile gives the frame and the key layout, the learning wizard (step 5) learns your remote's address.
 
-| Profile | Hoods | Status |
-|---|---|---|
-| `ciarko_xy8011.yaml` | Ciarko with the XY8011-RF remote family – Duo 74 (tested), SU Mini (same key codes) | tested |
+| Profile | Hoods | Frame | Keys | Status |
+|---|---|---|---|---|
+| `ciarko_xy8011.yaml` | Ciarko with the XY8011-RF remote – Duo 74, SU Mini | 36 bit, toggle bit | light, fan − / +, timer, brighter, dimmer | **tested** |
+| `elica_came18.yaml` | Elica (and hoods Elica builds for other brands) with the 6-key RF remote | CAME 18 bit | light on / off / toggle, fan − / + / off | untested |
+| `novy_840029.yaml` | Novy with the white remote 840029 | CAME 12 / 18 bit | light, power, fan − / + | untested |
+| `luxair_came18.yaml` | Luxair (UK) with the RF remote | CAME 18 bit | light, fan − / + / off, timer | untested |
+| `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, needs 315 MHz modules | PT2262 24 bit | light, fan (step), power, timer | untested |
 
-**Another hood?** If its remote sends plain OOK frames (most hood remotes do; rolling codes cannot work), copy a
-profile, learn your keys with the receiver and `tools/learn_codes.py`, and measure the power table. Open an issue
-*New hood profile* with the file – every profile makes HbH work for more kitchens. Remotes with other key layouts
-(direct speed keys, separate light on/off), IR remotes and other frequencies (CC1101) are on the roadmap.
+*Untested* profiles come from published captures (Flipper Zero, other ESPHome projects – see [NOTICE](NOTICE));
+the receiver's decoder was checked against the raw Elica captures. Their power tables are placeholders – press
+*Calibrate hood* (needs fan + up to boost and brighter / dimmer) or measure them. Optional keys are used when a
+remote has them: *fan off* for stop, *light on / off* instead of the toggle.
+
+**Another hood?** If its remote sends plain OOK frames at 433.92 MHz (most hood remotes do; rolling codes cannot
+work), copy the profile with the same frame format (`rf_bit_order: hl` = mark-space with a sync at the end, PT2262
+and Ciarko; `lh` = start pulse and space-mark, CAME), learn the keys and measure the power table. Open an issue
+*New hood profile* with the file – every profile makes HbH work for more kitchens. IR remotes and other
+frequencies (CC1101) are on the roadmap.
 
 ## Which Shelly to use
 

@@ -1,0 +1,58 @@
+# HbH – hood profile: Novy cooker hoods with the white RF remote 840029 (4 keys: light, power, fan + / −)
+# The remote has 10 pairing codes (1 = factory default); the codes below are pairing code 1. Fan + / − send
+# shorter 12-bit frames, light and power 18-bit frames. Home Assistant 2026.5+ also has its own Novy Cooker Hood
+# integration – HbH adds the hob automation and the hood state from the power reading.#
+# Frame: CAME, OOK at 433.92 MHz – a start pulse, then every bit as (space, mark): 1 = long space + short mark,
+# 0 = short space + long mark (the convention of Flipper Zero's CAME protocol, so Flipper "Key" values can be used
+# as they are), then a long gap. No toggle bit. The first bits are the address of the remote (paired with the
+# hood), the last 6 bits the command.
+#
+# STATUS: codes and timing from published captures – NOT tested on a hood by the author. The codes below are
+# from someone else's remote: learn yours with the wizard ("Learn remote") – the command bits stay the same,
+# the address changes. Please report in an issue whether it works.
+#
+# Sources: Flipper Zero captures in UberGuidoZ/Flipper (Sub-GHz/Misc/Novy_Pure_Line_682X_Kitchen_Hood),
+# VanIseghemThomas/novy-esphome (timing 350 µs) and the Home Assistant community thread "ESPHome control Novy hood
+# with FS1000A RF transmitter".
+substitutions:
+  profile_name: "Novy 840029 (untested)"
+
+  # ---- RF frame (µs)
+  rf_one_high: "350"        # bit 1: short mark …
+  rf_one_low: "700"         # … after a long space
+  rf_zero_high: "700"
+  rf_zero_low: "350"
+  rf_start_high: "350"      # start pulse
+  rf_bit_order: "lh"         # a bit = space, mark
+  rf_sync_high: "0"
+  rf_sync_low: "12600"       # gap after a frame
+  rf_frame_bits: "18"
+  rf_toggle_bit: "-1"        # none
+  rf_short_frames: "15"
+  rf_hold_frames: "90"
+  rf_colour_frames: "90"
+  # ---- keys: full frames ("" = the remote has no such key)
+  key_light: "010101010111010001"            # 0x155D1 light toggle (hold = dim)
+  key_power: "010101010111010011"            # 0x155D3 hood on / off
+  key_fan_plus: "010101010101"               # 0x555 (12 bit) fan +
+  key_fan_minus: "010101010110"              # 0x556 (12 bit) fan −
+  key_timer: ""
+  key_brighter: ""
+  key_dimmer: ""
+  key_light_on: ""
+  key_light_off: ""
+  key_fan_off: ""
+  # keys the learning wizard asks for, in this order
+  rf_learn_keys: "light,power,fan_plus,fan_minus"
+
+  # ---- power table, net W above standby: NOT MEASURED for this hood – placeholders. Press "Calibrate hood" (needs a
+  # remote with fan + up to boost and brighter / dimmer) or measure the hood with its Shelly and put the values here.
+  pw_standby: "0.5"
+  pw_fan1: "5"
+  pw_fan2: "12"
+  pw_fan3: "30"
+  pw_boost_min: "100"
+  pw_light1: "4"
+  pw_light2: "8"
+  pw_light3: "12"
+  pw_light4: "16"

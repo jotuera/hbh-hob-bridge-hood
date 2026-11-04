@@ -113,5 +113,9 @@
   "key_fan_plus": "ventola +",
   "key_timer": "timer",
   "key_brighter": "più luce (tasto 4)",
-  "key_dimmer": "meno luce (tasto 5)"
+  "key_dimmer": "meno luce (tasto 5)",
+  "key_light_on": "luce on",
+  "key_light_off": "luce off",
+  "key_fan_off": "ventola off",
+  "key_power": "accensione"
 }

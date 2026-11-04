@@ -113,5 +113,9 @@
   "key_fan_plus": "fan +",
   "key_timer": "timer",
   "key_brighter": "brighter (key 4)",
-  "key_dimmer": "dimmer (key 5)"
+  "key_dimmer": "dimmer (key 5)",
+  "key_light_on": "light on",
+  "key_light_off": "light off",
+  "key_fan_off": "fan off",
+  "key_power": "power (on / off)"
 }

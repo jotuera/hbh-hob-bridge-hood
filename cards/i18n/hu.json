@@ -113,5 +113,9 @@
   "key_fan_plus": "ventilátor +",
   "key_timer": "időzítő",
   "key_brighter": "világosabb (4. gomb)",
-  "key_dimmer": "sötétebb (5. gomb)"
+  "key_dimmer": "sötétebb (5. gomb)",
+  "key_light_on": "világítás be",
+  "key_light_off": "világítás ki",
+  "key_fan_off": "ventilátor ki",
+  "key_power": "főkapcsoló (be / ki)"
 }

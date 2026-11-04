@@ -59,26 +59,44 @@ esphome:
             for (int i = 0; i < 9; i++) id(g_cal)[i] = t[i];
             id(g_cal_valid) = valid;
           };
-          // codes learned by the wizard override the key_* codes of the profile
+          // keys of the profile ("" = the remote has no such key); codes learned by the wizard override them
+          hbh::PROFILE_KEYS = {
+            {"light", "${key_light}"}, {"fan_minus", "${key_fan_minus}"}, {"fan_plus", "${key_fan_plus}"},
+            {"timer", "${key_timer}"}, {"brighter", "${key_brighter}"}, {"dimmer", "${key_dimmer}"},
+            {"light_on", "${key_light_on}"}, {"light_off", "${key_light_off}"}, {"fan_off", "${key_fan_off}"},
+            {"power", "${key_power}"},
+          };
+          {
+            std::string l = "${rf_learn_keys}", w;
+            for (char c : l + ",") { if (c == ',') { if (!w.empty()) hbh::LEARN_KEYS.push_back(w); w.clear(); } else if (c != ' ') w += c; }
+          }
           hbh::FRAME_BITS = ${rf_frame_bits};
           hbh::TOGGLE_BIT = ${rf_toggle_bit};
           hbh::has_receiver = id(src_remote).state.find('.') != std::string::npos;
-          if (id(g_keys_valid) && hbh::FRAME_BITS <= 64) {
-            for (int i = 0; i < 6; i++) {
+          // stored per key: (length << 58) | bits, 0 = not learned
+          if (id(g_keys_valid)) {
+            for (int i = 0; i < 10; i++) {
+              uint64_t v = id(g_keys)[i];
+              int n = (int) (v >> 58);
+              if (n <= 0) continue;
               std::string b;
-              for (int j = hbh::FRAME_BITS - 1; j >= 0; j--) b += ((id(g_keys)[i] >> j) & 1) ? '1' : '0';
-              hbh::KEYS[i] = b;
+              for (int j = n - 1; j >= 0; j--) b += ((v >> j) & 1) ? '1' : '0';
+              hbh::KEYS[hbh::ALL_KEYS[i]] = b;
             }
-            hbh::keys_learned = true;
+            hbh::keys_learned = !hbh::KEYS.empty();
           }
           hbh::remote_pub = [](const std::string &v) { id(st_rkey).publish_state(v); };
-          hbh::keys_store = [](const std::string *k, bool valid) {
-            for (int i = 0; i < 6; i++) {
+          hbh::keys_store = []() {
+            for (int i = 0; i < 10; i++) {
               uint64_t v = 0;
-              for (char c : k[i]) v = (v << 1) | (c == '1' ? 1 : 0);
+              auto it = hbh::KEYS.find(hbh::ALL_KEYS[i]);
+              if (it != hbh::KEYS.end() && it->second.size() <= 58) {
+                for (char c : it->second) v = (v << 1) | (c == '1' ? 1 : 0);
+                v |= (uint64_t) it->second.size() << 58;
+              }
               id(g_keys)[i] = v;
             }
-            id(g_keys_valid) = valid && hbh::FRAME_BITS <= 64;
+            id(g_keys_valid) = true;
           };
           hbh::tx_send = [](const std::string &k, int n) { id(send_rf)->execute(k, n); };
           hbh::tx_busy = []() { return id(send_rf)->is_running(); };
@@ -165,7 +183,7 @@ globals:
     initial_value: 'false'
   # codes of the user's remote learned by the wizard (frame bits, MSB first, toggle bit 0) – override the profile
   - id: g_keys
-    type: std::array<uint64_t, 6>
+    type: std::array<uint64_t, 10>
     restore_value: true
   - id: g_keys_valid
     type: bool
@@ -188,36 +206,32 @@ script:
     then:
       - light.turn_on: {id: led, brightness: 30%, red: 0%, green: 60%, blue: 100%}
       - lambda: |-
-          static const std::map<std::string, std::string> CMD = {
-            {"light", "${key_light}"},
-            {"fan_minus", "${key_fan_minus}"},
-            {"fan_plus", "${key_fan_plus}"},
-            {"timer", "${key_timer}"},
-            {"brighter", "${key_brighter}"},
-            {"dimmer", "${key_dimmer}"},
-          };
-          auto it = CMD.find(key);
-          if (it == CMD.end()) { ESP_LOGW("rf", "unknown key %s", key.c_str()); return; }
-          std::string code = hbh::learned_code(key);   // learned by the wizard, else the profile
-          if (code.empty()) code = it->second;
+          // code: learned by the wizard, else the profile's ("" = the remote has no such key)
+          std::string code = hbh::key_code(key);
+          if (code.empty()) { ESP_LOGW("rf", "the remote has no key %s", key.c_str()); return; }
           id(tgl) = !id(tgl);
           const int tb = ${rf_toggle_bit};
           if (tb >= 0 && tb < (int) code.size()) code[tb] = id(tgl) ? '1' : '0';
           int n = frames < 1 ? 1 : (frames > 300 ? 300 : frames);
-          // the whole burst in one buffer: frames back to back, no gaps (like the remote)
+          // frame of the profile: [start pulse] + bits + [sync]; a bit is mark-space ("hl", PT2262 / Ciarko) or
+          // space-mark ("lh", CAME); the whole burst in one buffer, frames back to back (like the remote)
+          const int START = ${rf_start_high}, SH = ${rf_sync_high}, SL = ${rf_sync_low};
+          const bool LH = std::string("${rf_bit_order}") == "lh";
           auto call = id(rf_tx).transmit();
           auto *d = call.get_data();
           d->set_carrier_frequency(0);
           for (int r = 0; r < n; r++) {
+            if (START > 0) d->mark(START);
             for (char b : code) {
-              if (b == '1') { d->mark(${rf_one_high}); d->space(${rf_one_low}); }
-              else { d->mark(${rf_zero_high}); d->space(${rf_zero_low}); }
+              int h = b == '1' ? ${rf_one_high} : ${rf_zero_high}, l = b == '1' ? ${rf_one_low} : ${rf_zero_low};
+              if (LH) { d->space(l); d->mark(h); } else { d->mark(h); d->space(l); }
             }
-            d->mark(${rf_sync_high}); d->space(${rf_sync_low});
+            if (SH > 0) d->mark(SH);
+            d->space(SL);
           }
           call.perform();
           // the burst runs in the background; the script waits for it
-          uint32_t frame_us = ${rf_sync_high} + ${rf_sync_low};
+          uint32_t frame_us = START + SH + SL;
           for (char b : code) frame_us += b == '1' ? ${rf_one_high} + ${rf_one_low} : ${rf_zero_high} + ${rf_zero_low};
           id(burst_ms) = (uint32_t) ((uint64_t) n * frame_us / 1000) + 20;
           hbh::last_tx = millis() + id(burst_ms);
@@ -227,6 +241,8 @@ script:
           if (key == "fan_plus") hbh::on_cmd(held ? "boost" : "fan_plus");
           else if (key == "fan_minus") hbh::on_cmd(held ? "stop" : "fan_minus");
           else if (key == "light") hbh::on_cmd(hbh::E.pl ? "light_off" : "light_on");
+          else if (key == "fan_off") hbh::on_cmd("stop");
+          else if (key == "light_on" || key == "light_off") hbh::on_cmd(key);
           else if ((key == "brighter" || key == "dimmer") && !held) hbh::on_cmd("brightness");
       - delay: !lambda "return id(burst_ms);"
       - light.turn_off: led
@@ -370,7 +386,8 @@ interval:
           // learning the remote: "Learning n/12" (2 presses of 6 keys) or the codes in use
           static std::string lrn_last;
           std::string ls;
-          if (hbh::LRN.active) ls = std::string("${t_lrn_running} ") + std::to_string(hbh::LRN.step + 1) + "/12";
+          // "Learning 3/12 · fan_minus": progress and the key to press (the cards show its name)
+          if (hbh::LRN.active) ls = std::string("${t_lrn_running} ") + std::to_string(hbh::LRN.step + 1) + "/" + std::to_string(hbh::learn_steps()) + " · " + hbh::learn_key();
           else if (hbh::LRN.result == "aborted") ls = "${t_lrn_aborted}";
           else if (hbh::LRN.result == "no_rx") ls = "${t_lrn_norx}";
           else ls = hbh::keys_learned ? "${t_lrn_ok}" : "${t_lrn_profile}";
@@ -722,7 +739,7 @@ button:
     entity_category: config
     on_press:
       - lambda: |-
-          hbh::keys_learned = false; id(g_keys_valid) = false;
+          hbh::keys_learned = false; hbh::KEYS.clear(); id(g_keys_valid) = false;
           hbh::LRN.result = "";
   - platform: template
     id: filter_clean

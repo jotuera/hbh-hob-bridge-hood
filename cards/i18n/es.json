@@ -113,5 +113,9 @@
   "key_fan_plus": "ventilador +",
   "key_timer": "temporizador",
   "key_brighter": "más luz (tecla 4)",
-  "key_dimmer": "menos luz (tecla 5)"
+  "key_dimmer": "menos luz (tecla 5)",
+  "key_light_on": "luz on",
+  "key_light_off": "luz off",
+  "key_fan_off": "ventilador off",
+  "key_power": "encendido"
 }

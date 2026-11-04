@@ -113,5 +113,9 @@
   "key_fan_plus": "ventilátor +",
   "key_timer": "časovač",
   "key_brighter": "jasněji (tlačítko 4)",
-  "key_dimmer": "tmavěji (tlačítko 5)"
+  "key_dimmer": "tmavěji (tlačítko 5)",
+  "key_light_on": "světlo zap.",
+  "key_light_off": "světlo vyp.",
+  "key_fan_off": "ventilátor vyp.",
+  "key_power": "napájení (zap. / vyp.)"
 }

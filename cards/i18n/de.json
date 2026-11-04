@@ -113,5 +113,9 @@
   "key_fan_plus": "Lüfter +",
   "key_timer": "Timer",
   "key_brighter": "heller (Taste 4)",
-  "key_dimmer": "dunkler (Taste 5)"
+  "key_dimmer": "dunkler (Taste 5)",
+  "key_light_on": "Licht an",
+  "key_light_off": "Licht aus",
+  "key_fan_off": "Lüfter aus",
+  "key_power": "Ein / Aus"
 }

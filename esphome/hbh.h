@@ -12,17 +12,19 @@
 // 5. Night reset: at a set time the hood relay is cut for 15 s when the hood still draws power.
 // 6. Statistics: hob energy today / of the last cooking, grease-filter usage (fan hours weighted by speed).
 // 7. Calibration: measures the hood's power table by itself (any hood) and keeps it across restarts.
-// 8. Learning the remote: the codes of the user's remote, learned through the receiver, kept across restarts.
+// 8. Keys of the remote: the profile's codes or codes learned through the receiver (kept across restarts);
+//    optional keys (fan off, light on / off) are used when the remote has them.
 // All sources are Home Assistant entities chosen at runtime (text entities, applied after a restart).
 #pragma once
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
 #include <deque>
+#include <map>
+#include <vector>
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 #include "esphome/core/hal.h"
 #include "esphome/core/log.h"
 #include "esphome/components/api/api_server.h"
@@ -279,6 +281,15 @@ inline std::string colour = "";    // "cool" / "warm" (restored by the YAML)
 inline uint32_t timer_end = 0;     // countdown of the 10-min timer
 
 inline void press(const std::string &key, int frames = 0) { if (tx_send) tx_send(key, frames > 0 ? frames : RF_SHORT); }
+inline bool has_key(const std::string &key);
+// stop: a "fan off" key when the remote has one, else hold fan −
+inline void press_stop() { if (has_key("fan_off")) press("fan_off"); else press("fan_minus", RF_HOLD); }
+// light on / off: separate keys when the remote has them, else the toggle
+inline void press_light(bool on) {
+  if (on && has_key("light_on")) press("light_on");
+  else if (!on && has_key("light_off")) press("light_off");
+  else press("light");
+}
 inline bool tx_idle() { return !(tx_busy && tx_busy()); }
 
 // a new speed / light request replaces a pending or running one of the same kind (like mode: restart)
@@ -341,7 +352,7 @@ inline bool step(Job &j) {
         case 2:
           if (target == 0) {
             if (E.pb == 0) return true;
-            press("fan_minus", RF_HOLD);   // stop = hold fan −
+            press_stop();
             go(10); return false;
           }
           j.b = E.pb;
@@ -388,16 +399,16 @@ inline bool step(Job &j) {
           target_light = target;
           if (target == 0) {
             if (!E.pl) return true;
-            j.p0 = IN.hood_p; j.n = 0; press("light"); go(20); return false;
+            j.p0 = IN.hood_p; j.n = 0; press_light(false); go(20); return false;
           }
-          if (!E.pl) { j.p0 = IN.hood_p; j.n = 0; press("light"); go(1); return false; }
+          if (!E.pl) { j.p0 = IN.hood_p; j.n = 0; press_light(true); go(1); return false; }
           if (target == 9) return true;
           go(3); return false;
         case 1:  // light on: wait up to 15 s; resend only when the power did not move at all (the code was lost)
           if (!tx_idle()) { j.t = t; return false; }
           if (E.pl) { go(2); return false; }
           if (el() < 15) return false;
-          if (j.n == 0 && E.pb <= 2 && std::fabs(IN.hood_p - j.p0) < 1.5f) { j.n = 1; press("light"); go(1); return false; }
+          if (j.n == 0 && E.pb <= 2 && std::fabs(IN.hood_p - j.p0) < 1.5f) { j.n = 1; press_light(true); go(1); return false; }
           return true;
         case 2:
           if (target == 9) return true;
@@ -432,7 +443,7 @@ inline bool step(Job &j) {
           if (!E.pl) return true;
           if (el() < 15) return false;
           if (j.n == 0 && E.pb <= 2 && std::fabs(IN.hood_p - j.p0) < 1.5f) {
-            j.n = 1; press("light"); go(20); return false;
+            j.n = 1; press_light(false); go(20); return false;
           }
           return true;
       }
@@ -552,75 +563,87 @@ inline void light_on_auto() {
 inline void manual_fan() { if (B.session) { B.manual = true; ESP_LOGI(TAG, "manual fan – automation leaves the fan"); } }
 inline void manual_light() { B.auto_lit = false; }
 
-// ================================================================== learning the remote's codes
-// The receiver (hbh-remote-rx.yaml) sends the bits of every press – also of a remote it does not know. The wizard
-// asks for the six keys in a fixed order, each pressed twice (two equal frames, the toggle bit ignored). The codes
-// are kept in the ESP across restarts and override the key_* codes of the profile – no YAML, no re-flashing.
-inline const char *const KEY_NAMES[6] = {"light", "fan_minus", "fan_plus", "timer", "brighter", "dimmer"};
+// ================================================================== keys of the remote, learning their codes
+// A profile defines the codes of the keys its remote has (key_* substitutions, "" = the remote has no such key):
+//   light (toggle), fan_minus, fan_plus, timer, brighter, dimmer, light_on, light_off, fan_off, power.
+// The brain uses fan_off for "stop" and light_on / light_off for the light when the remote has them, otherwise
+// a held fan − and the light toggle.
+//
+// Learning: the receiver (hbh-remote-rx.yaml) sends the bits of every press – also of a remote it does not know.
+// The wizard asks for the keys of rf_learn_keys in order, each pressed twice (two equal frames, the toggle bit
+// ignored). The codes are kept in the ESP across restarts and override the profile – no YAML, no re-flashing.
+inline const char *const ALL_KEYS[10] = {"light", "fan_minus", "fan_plus", "timer", "brighter", "dimmer",
+                                         "light_on", "light_off", "fan_off", "power"};
+inline std::map<std::string, std::string> PROFILE_KEYS;   // codes of the profile – set by the YAML
+inline std::vector<std::string> LEARN_KEYS;               // keys the wizard asks for, in order
 struct Learn {
   bool active = false;
-  int step = 0;              // 0–11: key = step / 2, press = step % 2
+  int step = 0;              // 0 … 2·keys − 1: key = step / 2, press = step % 2
   std::string first;         // the first press of the current key
-  std::string codes[6];
+  std::map<std::string, std::string> codes;
   uint32_t t = 0;            // last activity (timeout)
   std::string result;        // "", "ok", "aborted", "no_rx"
 };
 inline Learn LRN;
-inline std::string KEYS[6];                 // learned codes, toggle bit 0
+inline std::map<std::string, std::string> KEYS;           // learned codes, toggle bit 0
 inline bool keys_learned = false;
 inline bool has_receiver = false;
 inline int FRAME_BITS = 0, TOGGLE_BIT = -1;
-inline std::function<void(const std::string *, bool)> keys_store;   // saves the codes – provided by the YAML
-inline std::function<void(const std::string &)> remote_pub;           // recognised press "seq|key|frames|held_ms" for the cards
+inline std::function<void()> keys_store;                  // saves KEYS – provided by the YAML
+inline std::function<void(const std::string &)> remote_pub;   // recognised press "seq|key|frames|held_ms" for the cards
 
 inline std::string norm_bits(std::string b) {
   if (TOGGLE_BIT >= 0 && TOGGLE_BIT < (int) b.size()) b[TOGGLE_BIT] = '0';
   return b;
 }
-// learned code of a key, "" = use the profile
 inline std::string learned_code(const std::string &key) {
   if (!keys_learned) return "";
-  for (int i = 0; i < 6; i++) if (key == KEY_NAMES[i]) return KEYS[i];
-  return "";
+  auto it = KEYS.find(key);
+  return it == KEYS.end() ? "" : it->second;
 }
+// code to send: learned, else the profile's; "" = the remote has no such key
+inline std::string key_code(const std::string &key) {
+  std::string c = learned_code(key);
+  if (c.empty()) { auto it = PROFILE_KEYS.find(key); if (it != PROFILE_KEYS.end()) c = it->second; }
+  return c;
+}
+inline bool has_key(const std::string &key) { return !key_code(key).empty(); }
 // key of a received frame by the learned codes, "" = unknown
 inline std::string key_of_bits(const std::string &bits) {
   if (!keys_learned || bits.empty()) return "";
   std::string n = norm_bits(bits);
-  for (int i = 0; i < 6; i++) if (KEYS[i] == n) return KEY_NAMES[i];
+  for (auto &p : KEYS) if (p.second == n) return p.first;
   return "";
 }
+inline int learn_steps() { return 2 * (int) LEARN_KEYS.size(); }
+inline std::string learn_key() { int k = LRN.step / 2; return k < (int) LEARN_KEYS.size() ? LEARN_KEYS[k] : ""; }
 
 inline void learn_frame(const std::string &bits) {
   LRN.t = now_ms();
-  if ((int) bits.size() != FRAME_BITS) {
-    ESP_LOGW(TAG, "learning: a frame of %d bits, the profile has %d – another remote family?", (int) bits.size(), FRAME_BITS);
-    return;
-  }
-  std::string n = norm_bits(bits);
-  int k = LRN.step / 2;
-  for (int i = 0; i < k; i++)
-    if (LRN.codes[i] == n) { ESP_LOGW(TAG, "learning: that was %s again – press %s", KEY_NAMES[i], KEY_NAMES[k]); return; }
+  if (bits.size() < 8 || bits.size() > 58) { ESP_LOGW(TAG, "learning: a frame of %d bits ignored", (int) bits.size()); return; }
+  std::string n = norm_bits(bits), key = learn_key();
+  for (auto &p : LRN.codes)
+    if (p.second == n) { ESP_LOGW(TAG, "learning: that was %s again – press %s", p.first.c_str(), key.c_str()); return; }
   if (LRN.step % 2 == 0) {
     LRN.first = n; LRN.step++;
-    ESP_LOGI(TAG, "learning %s: once more", KEY_NAMES[k]);
+    ESP_LOGI(TAG, "learning %s: once more", key.c_str());
     return;
   }
   if (n != LRN.first) {      // a different frame: it becomes the first press
     LRN.first = n;
-    ESP_LOGW(TAG, "learning %s: a different frame – press the same key once more", KEY_NAMES[k]);
+    ESP_LOGW(TAG, "learning %s: a different frame – press the same key once more", key.c_str());
     return;
   }
-  LRN.codes[k] = n; LRN.step++;
-  ESP_LOGI(TAG, "learned %s: %s", KEY_NAMES[k], n.c_str());
-  if (LRN.step < 12) { ESP_LOGI(TAG, "learning: press %s twice", KEY_NAMES[k + 1]); return; }
-  for (int i = 0; i < 6; i++) KEYS[i] = LRN.codes[i];
+  LRN.codes[key] = n; LRN.step++;
+  ESP_LOGI(TAG, "learned %s: %s", key.c_str(), n.c_str());
+  if (LRN.step < learn_steps()) { ESP_LOGI(TAG, "learning: press %s twice", learn_key().c_str()); return; }
+  KEYS = LRN.codes;
   keys_learned = true;
-  if (keys_store) keys_store(KEYS, true);
+  if (keys_store) keys_store();
   LRN.active = false; LRN.result = "ok";
   B.boot_t = now_ms();       // the presses changed the hood – not a manual takeover of a session
   ESP_LOGI(TAG, "remote learned – lines for a profile:");
-  for (int i = 0; i < 6; i++) ESP_LOGI(TAG, "  key_%s: \"%s\"", KEY_NAMES[i], KEYS[i].c_str());
+  for (auto &p : KEYS) ESP_LOGI(TAG, "  key_%s: \"%s\"", p.first.c_str(), p.second.c_str());
 }
 
 // event from the receiver of the original remote: "seq|key|frames|held_ms|bits" (bits since 0.2.0;
@@ -952,14 +975,14 @@ inline void loop_cal() {
   if (CAL.phase == 0) {          // act
     switch (CAL.step) {
       case 0:  // stop and light off
-        if (E.pb > 0) press("fan_minus", RF_HOLD);
-        if (E.pl) press("light");
+        if (E.pb > 0) press_stop();
+        if (E.pl) press_light(false);
         break;
       case 1: case 2: case 3: case 4: press("fan_plus"); break;
-      case 5: press("fan_minus", RF_HOLD); break;
-      case 6: press("light"); for (int i = 0; i < 4; i++) press("dimmer"); break;   // on, then down to 25 %
+      case 5: press_stop(); break;
+      case 6: press_light(true); for (int i = 0; i < 4; i++) press("dimmer"); break;   // on, then down to 25 %
       case 7: case 8: case 9: press("brighter"); break;
-      case 10: press("light"); cal_finish(); return;
+      case 10: press_light(false); cal_finish(); return;
     }
     go(1);
     return;
@@ -987,9 +1010,10 @@ inline void learn_start() {
   if (LRN.active) { LRN.active = false; LRN.result = "aborted"; ESP_LOGW(TAG, "learning aborted"); return; }
   if (CAL.active) return;
   if (!has_receiver) { LRN.result = "no_rx"; ESP_LOGW(TAG, "learning: set \"Source: remote receiver\" first"); return; }
+  if (LEARN_KEYS.empty()) { LRN.result = "aborted"; return; }
   Q.clear(); job_active = false; target_speed = -1; target_light = -1;
   LRN = Learn(); LRN.active = true; LRN.t = now_ms();
-  ESP_LOGI(TAG, "learning started – press %s twice", KEY_NAMES[0]);
+  ESP_LOGI(TAG, "learning started – press %s twice", learn_key().c_str());
 }
 
 // everything, every ~200 ms

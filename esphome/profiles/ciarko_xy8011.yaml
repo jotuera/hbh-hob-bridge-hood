@@ -15,6 +15,8 @@ substitutions:
   rf_zero_low: "790"
   rf_sync_high: "1710"
   rf_sync_low: "4900"
+  rf_start_high: "0"         # no start pulse
+  rf_bit_order: "hl"         # a bit = mark, space
   rf_frame_bits: "36"
   rf_toggle_bit: "32"        # index of the bit that flips on every press (-1 = the remote has none)
   rf_short_frames: "8"       # a short press
@@ -31,6 +33,13 @@ substitutions:
   key_timer: "000100100011010011111110000000001010"       # 0xFE timer (~10 min)
   key_brighter: "000100100011010000010001000000001010"    # 0x11 brighter (hold ≥ 3 s = cooler colour)
   key_dimmer: "000100100011010000001011000000000010"      # 0x0B dimmer   (hold ≥ 3 s = warmer colour)
+  # keys this remote does not have
+  key_light_on: ""
+  key_light_off: ""
+  key_fan_off: ""
+  key_power: ""
+  # keys the learning wizard asks for, in this order
+  rf_learn_keys: "light,fan_minus,fan_plus,timer,brighter,dimmer"
 
   # ---- power table, net W above standby (Ciarko Duo 74, Shelly Plus 1PM, 07.10 / 14.10.2026)
   pw_standby: "0.5"

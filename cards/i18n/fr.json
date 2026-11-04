@@ -113,5 +113,9 @@
   "key_fan_plus": "ventilation +",
   "key_timer": "minuterie",
   "key_brighter": "plus clair (touche 4)",
-  "key_dimmer": "plus sombre (touche 5)"
+  "key_dimmer": "plus sombre (touche 5)",
+  "key_light_on": "lumière on",
+  "key_light_off": "lumière off",
+  "key_fan_off": "ventilation off",
+  "key_power": "marche / arrêt"
 }

@@ -134,40 +134,64 @@ remote_receiver:
   on_raw:
     then:
       - lambda: |-
-          static const std::map<std::string, std::string> CMD = {
-                {"${key_light}", "light"},
-                {"${key_fan_minus}", "fan_minus"},
-                {"${key_fan_plus}", "fan_plus"},
-                {"${key_timer}", "timer"},
-                {"${key_brighter}", "brighter"},
-                {"${key_dimmer}", "dimmer"},
-          };
-          // frame of the profile: NB bits (HIGH, LOW) followed by the frame-end pulse (sync HIGH)
-          const int NB = ${rf_frame_bits}, TB = ${rf_toggle_bit}, SH = ${rf_sync_high};
+          // keys of the profile ("" = the remote has no such key)
+          static std::map<std::string, std::string> CMD;
+          if (CMD.empty()) {
+            const char *K[][2] = {
+              {"${key_light}", "light"}, {"${key_fan_minus}", "fan_minus"}, {"${key_fan_plus}", "fan_plus"},
+              {"${key_timer}", "timer"}, {"${key_brighter}", "brighter"}, {"${key_dimmer}", "dimmer"},
+              {"${key_light_on}", "light_on"}, {"${key_light_off}", "light_off"}, {"${key_fan_off}", "fan_off"},
+              {"${key_power}", "power"}};
+            for (auto &k : K) if (k[0][0]) CMD[k[0]] = k[1];
+          }
+          // frame lengths of the profile (CAME remotes mix 12- and 18-bit frames); others are cut-off frames
+          static std::vector<int> LENS;
+          if (LENS.empty()) { LENS.push_back(${rf_frame_bits}); for (auto &c : CMD) LENS.push_back((int) c.first.size()); }
+          const int NB = ${rf_frame_bits}, TB = ${rf_toggle_bit}, SH = ${rf_sync_high}, START = ${rf_start_high};
           const int H1 = ${rf_one_high}, L1 = ${rf_one_low}, H0 = ${rf_zero_high}, L0 = ${rf_zero_low};
           const int PMIN = std::min(std::min(H1, L1), std::min(H0, L0)) * 45 / 100;
           const int PMAX = std::max(std::max(H1, L1), std::max(H0, L0)) * 3 / 2;
-          // find the frame-end pulse; the 2·NB durations before it are the bits. Noise can contain a fake
-          // candidate, so try all of them.
+          auto bit = [&](int h, int l) { return (std::abs(h - H1) + std::abs(l - L1) < std::abs(h - H0) + std::abs(l - L0)) ? '1' : '0'; };
           std::string bits;
           bool candidate = false, ok = false;
-          for (int sync = 2 * NB; sync < (int) x.size() && !ok; sync++) {
-            if (x[sync] < SH * 7 / 10 || x[sync] > SH * 135 / 100) continue;
-            candidate = true;
-            bits.clear();
-            int i = sync - 2 * NB;
-            for (; i < sync; i += 2) {
-              int h = x[i], l = -x[i + 1];
-              if (h < PMIN || h > PMAX || l < PMIN || l > PMAX) break;
-              bits += (std::abs(h - H1) + std::abs(l - L1) < std::abs(h - H0) + std::abs(l - L0)) ? '1' : '0';
+          if (std::string("${rf_bit_order}") == "lh") {
+            // CAME: start pulse, then (space, mark) per bit up to the end of the packet – the gap after a frame is
+            // longer than idle, so every frame is its own packet; the length may differ between keys (12 / 18 bits)
+            int end = (int) x.size();
+            if (end > 0 && x[end - 1] < 0) end--;
+            for (int st = 0; st + 16 < end && !ok; st++) {
+              if (x[st] < START * 6 / 10 || x[st] > START * 16 / 10) continue;
+              candidate = true;
+              bits.clear();
+              int i = st + 1;
+              for (; i + 1 < end; i += 2) {
+                int l = -x[i], h = x[i + 1];
+                if (h < PMIN || h > PMAX || l < PMIN || l > PMAX) break;
+                bits += bit(h, l);
+              }
+              ok = i + 1 >= end && std::find(LENS.begin(), LENS.end(), (int) bits.size()) != LENS.end();
             }
-            ok = (i >= sync);
+          } else {
+            // NB bits (mark, space) followed by the frame-end pulse (sync mark); noise can contain a fake candidate,
+            // so try all of them
+            for (int sync = 2 * NB; sync < (int) x.size() && !ok; sync++) {
+              if (x[sync] < SH * 7 / 10 || x[sync] > SH * 135 / 100) continue;
+              candidate = true;
+              bits.clear();
+              int i = sync - 2 * NB;
+              for (; i < sync; i += 2) {
+                int h = x[i], l = -x[i + 1];
+                if (h < PMIN || h > PMAX || l < PMIN || l > PMAX) break;
+                bits += bit(h, l);
+              }
+              ok = (i >= sync);
+            }
           }
           if (!ok) { if (candidate) id(cnt_incomplete)++; return; }
           // the toggle bit flips on every press – ignore it for recognition
-          char tgl = (TB >= 0 && TB < NB) ? bits[TB] : '0';
+          char tgl = (TB >= 0 && TB < (int) bits.size()) ? bits[TB] : '0';
           std::string norm = bits;
-          if (TB >= 0 && TB < NB) norm[TB] = '0';
+          if (TB >= 0 && TB < (int) norm.size()) norm[TB] = '0';
           std::string cmd;
           for (auto &p : CMD) { std::string k = p.first; if (TB >= 0 && TB < (int) k.size()) k[TB] = '0'; if (k == norm) { cmd = p.second; break; } }
           if (cmd.empty()) {

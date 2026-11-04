@@ -113,5 +113,9 @@
   "key_fan_plus": "ventilator +",
   "key_timer": "timer",
   "key_brighter": "helderder (toets 4)",
-  "key_dimmer": "donkerder (toets 5)"
+  "key_dimmer": "donkerder (toets 5)",
+  "key_light_on": "licht aan",
+  "key_light_off": "licht uit",
+  "key_fan_off": "ventilator uit",
+  "key_power": "aan / uit"
 }

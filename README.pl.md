@@ -45,17 +45,29 @@ ciepłe. Lokalnie, bez chmury, bez automatyzacji w YAML – wszystkie ustawienia
 
 ## Profile okapów
 
-Wszystko, co zależy od okapu, jest w jednym pliku w `esphome/profiles/`: ramka radiowa (czasy bitów, długość ramki,
-bit przełączający), kody przycisków pilota i tabela mocy okapu. Dołącz jeden profil do packages obu urządzeń.
+Wszystko, co zależy od okapu, jest w jednym pliku w `esphome/profiles/`: ramka radiowa (format, czasy bitów, długość
+ramki, bit przełączający), kody przycisków pilota i tabela mocy okapu. Dołącz jeden profil do packages obu urządzeń.
+Wielu producentów okapów ma ten sam pilot z innymi kodami (adresem pilota): profil daje ramkę i układ przycisków, a
+kreator uczenia (krok 5) uczy się adresu Twojego pilota.
 
-| Profil | Okapy | Status |
-|---|---|---|
-| `ciarko_xy8011.yaml` | Ciarko z pilotem z rodziny XY8011-RF – Duo 74 (przetestowany), SU Mini (te same kody klawiszy) | przetestowany |
+| Profil | Okapy | Ramka | Przyciski | Status |
+|---|---|---|---|---|
+| `ciarko_xy8011.yaml` | Ciarko z pilotem XY8011-RF – Duo 74, SU Mini | 36 bitów, bit przełączający | światło, bieg − / +, timer, jaśniej, ciemniej | **przetestowany** |
+| `elica_came18.yaml` | Elica (i okapy, które Elica robi dla innych marek) z 6-przyciskowym pilotem RF | CAME 18 bitów | światło wł. / wył. / przełącz, bieg − / + / wył. | nieprzetestowany |
+| `novy_840029.yaml` | Novy z białym pilotem 840029 | CAME 12 / 18 bitów | światło, zasilanie, bieg − / + | nieprzetestowany |
+| `luxair_came18.yaml` | Luxair (UK) z pilotem RF | CAME 18 bitów | światło, bieg − / + / wył., timer | nieprzetestowany |
+| `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, potrzebne moduły 315 MHz | PT2262 24 bity | światło, wentylator (krok), zasilanie, timer | nieprzetestowany |
 
-**Inny okap?** Jeśli pilot nadaje zwykłe ramki OOK (większość pilotów okapów; kody kroczące nie zadziałają), skopiuj
-profil, naucz przyciski odbiornikiem i `tools/learn_codes.py` i zmierz tabelę mocy. Otwórz zgłoszenie *Nowy profil
-okapu* z plikiem – każdy profil to kolejne kuchnie, w których HbH działa. Piloty z innym układem przycisków
-(bezpośrednie biegi, osobne wł./wył. światła), piloty IR i inne częstotliwości (CC1101) są w planach.
+Profile *nieprzetestowane* pochodzą z opublikowanych nagrań (Flipper Zero, inne projekty ESPHome – zobacz
+[NOTICE](NOTICE)); dekoder odbiornika sprawdzono na surowych nagraniach Elica. Ich tabele mocy są orientacyjne –
+naciśnij *Kalibruj okap* (wymaga biegu + aż do boost i jaśniej / ciemniej) albo je zmierz. Opcjonalne przyciski są
+używane, gdy pilot je ma: *wentylator wył.* jako stop, *światło wł. / wył.* zamiast przełączania.
+
+**Inny okap?** Jeśli pilot nadaje zwykłe ramki OOK na 433,92 MHz (większość pilotów okapów; kody kroczące nie
+zadziałają), skopiuj profil o tym samym formacie ramki (`rf_bit_order: hl` = impuls-przerwa z synchronizacją na końcu,
+PT2262 i Ciarko; `lh` = impuls startowy i przerwa-impuls, CAME), naucz przyciski i zmierz tabelę mocy. Otwórz
+zgłoszenie *Nowy profil okapu* z plikiem – każdy profil to kolejne kuchnie, w których HbH działa. Piloty IR i inne
+częstotliwości (CC1101) są w planach.
 
 ## Jakie Shelly użyć
 
