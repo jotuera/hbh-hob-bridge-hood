@@ -104,8 +104,7 @@ No soldering. Put the transmitter within a few metres of the hood – not inside
 
 ### 1. ESPHome
 
-> **Order:** first the receiver (with the example codes), learn your remote's codes (step 1b), then
-> both devices with your codes.
+> The profile ships with **example codes** – the hood reacts only after you learn your remote (step 5, in the card).
 
 Copy the `esphome/` folder of this repo to your ESPHome folder as `hbh/`, add the keys of
 `secrets.yaml.example` to your `secrets.yaml` and create the device file:
@@ -118,9 +117,6 @@ substitutions:
   # optional defaults of the sources – they can be set later in the card editor
   src_hood_power: sensor.hood_power
   src_hood_switch: switch.hood
-  # the codes of YOUR remote (step 1b) – the profile only has examples
-  # key_light: "…"
-  # key_fan_minus: "…"   …
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml   # your hood
@@ -141,7 +137,6 @@ The receiver:
 substitutions:
   name: hbh-remote-rx
   friendly_name: HbH Remote RX
-  # the same key_* lines as in hbh-hood.yaml
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml
@@ -153,21 +148,6 @@ Build them with the ESPHome dashboard (Home Assistant add-on) or the `esphome` C
 (dashboard → *Install* → *Manual download*, then flash the file with [web.esphome.io](https://web.esphome.io)), later
 installs go over Wi-Fi.
 
-
-### 1b. Your remote's codes
-
-The codes in `esphome/profiles/ciarko_xy8011.yaml` are **examples** (placeholder remote ID) – the hood will not react to them. Each remote has its own 16-bit ID and a check
-byte that depends on it, so the codes cannot be computed – they have to be learned:
-
-```bash
-esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml
-# press: light, fan −, fan +, timer, key 4 (brighter), key 5 (dimmer) – then Ctrl+C
-```
-
-The receiver logs frames of an unknown remote as `unknown frame: <bits>`; the tool groups them into keys, ignores
-the toggle bit and writes the `key_*` lines. Paste them into the `substitutions:` of **both** device files (hood
-and receiver) – they override the example codes of the profile – and install both devices again. Until then the
-hood does not react to the ESP and the receiver reports every key as `unknown frame`.
 
 ### 2. Home Assistant
 
@@ -213,7 +193,24 @@ Open the editor of any card and choose the Home Assistant entities that feed the
 | Remote receiver – Remote event | knowing that someone used the original remote (manual takeover, card hints) |
 | Kitchen humidity / temperature, outdoor temperature / humidity | drying |
 
-### 5. Pairing after a power cut
+### 5. Your remote's codes
+
+Every remote has its own ID and check byte, so the codes cannot be computed – they are learned with the receiver:
+
+1. Open the settings of the *hood follows the hob* card and press **Learn remote** (it needs *Source: remote receiver*).
+2. The control card shows which key to press on the original remote – **each key twice**, one after the other:
+   light, fan −, fan +, timer, key 4 (brighter), key 5 (dimmer). The hood may react – that is fine.
+3. After the sixth key *Remote codes* shows **Learned**. The codes are kept in the ESP (no YAML, no re-flashing) and
+   the log prints them as `key_*` lines for a profile.
+
+*Restore profile codes* goes back to the codes of the profile; *Learn remote* during learning cancels it, and 90 s
+without a press ends it.
+
+**Without the card:** `esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml` (press every
+key twice, then Ctrl+C) writes the `key_*` lines – paste them into the `substitutions:` of both device files and
+install them again.
+
+### 6. Pairing after a power cut
 
 After power-up the hood pairs for 60 s with the first remote it hears. With the hood relay as a source, the ESP sends
 a *fan −* 5 s after the relay switches the hood on. Otherwise switch the hood off and on and press any key on the card

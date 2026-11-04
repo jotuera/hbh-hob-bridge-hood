@@ -102,8 +102,7 @@ Bez lutowania. Nadajnik kilka metrów od okapu – nie w metalowej szafce.
 
 ### 1. ESPHome
 
-> **Kolejność:** najpierw odbiornik (z przykładowymi kodami), nagraj kody swojego pilota (krok 1b),
-> potem oba urządzenia z Twoimi kodami.
+> Profil ma **przykładowe kody** – okap zareaguje dopiero po nauczeniu Twojego pilota (krok 5, w karcie).
 
 Skopiuj folder `esphome/` z repo do folderu ESPHome jako `hbh/`, dopisz klucze z `secrets.yaml.example` do swojego
 `secrets.yaml` i utwórz plik urządzenia:
@@ -116,9 +115,6 @@ substitutions:
   # opcjonalne domyślne źródła – można je ustawić później w edytorze karty
   src_hood_power: sensor.okap_moc
   src_hood_switch: switch.okap
-  # kody TWOJEGO pilota (krok 1b) – profil ma tylko przykładowe
-  # key_light: "…"
-  # key_fan_minus: "…"   …
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml   # Twój okap
@@ -139,7 +135,6 @@ Odbiornik:
 substitutions:
   name: hbh-remote-rx
   friendly_name: HbH Remote RX
-  # te same linie key_* co w hbh-hood.yaml
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml
@@ -150,21 +145,6 @@ packages:
 Zbuduj je w panelu ESPHome (dodatek Home Assistant) albo poleceniem `esphome`. Pierwsza instalacja przez USB (panel →
 *Install* → *Manual download*, potem wgraj plik przez [web.esphome.io](https://web.esphome.io)), kolejne przez Wi-Fi.
 
-
-### 1b. Kody Twojego pilota
-
-Kody w `esphome/profiles/ciarko_xy8011.yaml` są **przykładowe** (zmyślone ID pilota) – okap na nie nie zareaguje. Każdy pilot ma własne 16-bitowe ID i zależny od niego bajt
-kontrolny, więc kodów nie da się wyliczyć – trzeba je nagrać:
-
-```bash
-esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml
-# naciśnij: światło, bieg −, bieg +, timer, klawisz 4 (jaśniej), klawisz 5 (ciemniej) – potem Ctrl+C
-```
-
-Odbiornik loguje ramki nieznanego pilota jako `unknown frame: <bity>`; narzędzie grupuje je w klawisze, pomija
-bit przełączający i wypisuje linie `key_*`. Wklej je do `substitutions:` **obu** plików urządzeń (okap i odbiornik)
-– nadpisują przykładowe kody profilu – i wgraj oba urządzenia ponownie. Do tego czasu okap nie reaguje na ESP, a
-odbiornik zgłasza każdy klawisz jako `unknown frame`.
 
 ### 2. Home Assistant
 
@@ -210,7 +190,23 @@ Otwórz edytor dowolnej karty, wybierz encje Home Assistant, które zasilają m�
 | Odbiornik pilota – Zdarzenie pilota | wiedzy, że ktoś użył oryginalnego pilota (ręczne przejęcie, podpowiedzi na karcie) |
 | Wilgotność / temperatura kuchni, temperatura / wilgotność na zewnątrz | osuszania |
 
-### 5. Parowanie po zaniku prądu
+### 5. Kody Twojego pilota
+
+Każdy pilot ma własne ID i bajt kontrolny, więc kodów nie da się wyliczyć – uczy się ich odbiornikiem:
+
+1. Otwórz ustawienia karty *okap za płytą* i naciśnij **Naucz pilota** (potrzebne *Źródło: pilot (odbiornik)*).
+2. Karta sterowania pokazuje, który przycisk nacisnąć na oryginalnym pilocie – **każdy dwa razy**, jeden po drugim:
+   światło, bieg −, bieg +, timer, klawisz 4 (jaśniej), klawisz 5 (ciemniej). Okap może przy tym reagować.
+3. Po szóstym przycisku *Kody pilota* pokazuje **Nauczone**. Kody zostają w ESP (bez YAML-a i ponownego wgrywania),
+   a log wypisuje je jako linie `key_*` do profilu.
+
+*Przywróć kody z profilu* wraca do kodów profilu; *Naucz pilota* w trakcie uczenia je przerywa, a 90 s bez
+naciśnięcia kończy kreator.
+
+**Bez karty:** `esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml` (każdy przycisk
+dwa razy, potem Ctrl+C) wypisuje linie `key_*` – wklej je do `substitutions:` obu plików urządzeń i wgraj je ponownie.
+
+### 6. Parowanie po zaniku prądu
 
 Okap po włączeniu zasilania przez 60 s paruje się z pierwszym pilotem, który usłyszy. Gdy zasilanie okapu jest
 źródłem, ESP wysyła „bieg −” 5 s po włączeniu przekaźnika. W przeciwnym razie wyłącz i włącz okap i w ciągu minuty

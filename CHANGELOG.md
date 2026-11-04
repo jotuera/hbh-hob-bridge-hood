@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Remote learning wizard**: *Learn remote* – the cards show which key of the original remote to press (each
+  twice); the hood ESP keeps the codes and sends them instead of the profile's – no YAML, no re-flashing. The
+  receiver now reports presses of an unknown remote too (`key: unknown` with the frame bits), and the hood ESP
+  recognises the keys by the learned codes (new sensor *Remote key*). Cards 0.8.0.
+
 ## 0.1.0-beta – 2026-11-04
 
 First public version of HbH – Hob bridge Hood (formerly CIARKO Hob Hood Bridge), with the

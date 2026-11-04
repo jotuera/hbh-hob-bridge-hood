@@ -397,7 +397,7 @@ class HbhCard extends HTMLElement {
     const lrnSt = this._v("lrn_state") || "", lm = /(\d+)\/12$/.exec(lrnSt);
     if (lm) {   // learning wizard: which key, first or second press
       const s = +lm[1] - 1, k = LEARN_KEYS[Math.floor(s / 2)] || LEARN_KEYS[0];
-      h += `<div class="warn lrn" data-more="lrn_state"><div>📡 ${T.learn_press}: <b>${esc(T["key_" + k])}</b> – ${s % 2 ? T.learn_again : T.learn_twice}</div>` +
+      h += `<div class="warn lrn" data-more="lrn_state"><div>📡 ${T.learn_press}: <b>${esc(T["key_" + k])}</b> (${s % 2 ? T.learn_again : T.learn_twice})</div>` +
         `<div class="lrn2"><span>${Math.floor(s / 2) + 1}/6 · ${T.learn_hint}</span><span class="lx" data-act="learn_cancel">${T.learn_cancel}</span></div></div>`;
     }
     if (this._v("filter_due") === "on") h += `<div class="warn" data-more="filter_usage">🧽 ${T.filter_due} · ${dec(this._num("filter_usage"), 0)} %</div>`;
