@@ -1,7 +1,22 @@
 # HbH – hood profile: Novy cooker hoods with the white RF remote 840029 (4 keys: light, power, fan + / −)
 # The remote has 10 pairing codes (1 = factory default); the codes below are pairing code 1. Fan + / − send
 # shorter 12-bit frames, light and power 18-bit frames. Home Assistant 2026.5+ also has its own Novy Cooker Hood
-# integration – HbH adds the hob automation and the hood state from the power reading.#
+# integration – HbH adds the hob automation and the hood state from the power reading.
+#
+# All 10 pairing codes – frame = 4 bits code + 0101 + key (libussa/esphome-novy, confirmed for code 1 by the captures):
+#   code light (18 bit)           power (18 bit)           fan + (12)     fan − (12)
+#    1   01010101 0111010001   01010101 0111010011   01010101 0101   01010101 0110
+#    2   10010101 0111010001   10010101 0111010011   10010101 0101   10010101 0110
+#    3   00010101 0111010001   00010101 0111010011   00010101 0101   00010101 0110
+#    4   11100101 0111010001   11100101 0111010011   11100101 0101   11100101 0110
+#    5   01100101 0111010001   01100101 0111010011   01100101 0101   01100101 0110
+#    6   10100101 0111010001   10100101 0111010011   10100101 0101   10100101 0110
+#    7   00100101 0111010001   00100101 0111010011   00100101 0101   00100101 0110
+#    8   11000101 0111010001   11000101 0111010011   11000101 0101   11000101 0110
+#    9   01000101 0111010001   01000101 0111010011   01000101 0101   01000101 0110
+#   10   10000101 0111010001   10000101 0111010011   10000101 0101   10000101 0110
+# The remote also has a "novy" key (…0100, 12 bit) – no function known. The Novy 840039 remote (Cloud 230) uses
+# the same frames plus keys for the cooking / ambient light (SIGNALduino, RFD-FHEM/RFFHEM 14_SD_UT.pm).#
 # Frame: CAME, OOK at 433.92 MHz – a start pulse, then every bit as (space, mark): 1 = long space + short mark,
 # 0 = short space + long mark (the convention of Flipper Zero's CAME protocol, so Flipper "Key" values can be used
 # as they are), then a long gap. No toggle bit. The first bits are the address of the remote (paired with the
@@ -42,6 +57,10 @@ substitutions:
   key_light_on: ""
   key_light_off: ""
   key_fan_off: ""
+  key_speed_1: ""
+  key_speed_2: ""
+  key_speed_3: ""
+  key_speed_4: ""
   # keys the learning wizard asks for, in this order
   rf_learn_keys: "light,power,fan_plus,fan_minus"
 

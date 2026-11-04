@@ -55,14 +55,16 @@ profile gives the frame and the key layout, the learning wizard (step 5) learns 
 |---|---|---|---|---|
 | `ciarko_xy8011.yaml` | Ciarko with the XY8011-RF remote – Duo 74, SU Mini | 36 bit, toggle bit | light, fan − / +, timer, brighter, dimmer | **tested** |
 | `elica_came18.yaml` | Elica (and hoods Elica builds for other brands) with the 6-key RF remote | CAME 18 bit | light on / off / toggle, fan − / + / off | untested |
-| `novy_840029.yaml` | Novy with the white remote 840029 | CAME 12 / 18 bit | light, power, fan − / + | untested |
+| `bsh_sf01_01319004.yaml` | **Bosch, Siemens, Neff, Constructa, Balay** (BSH) with the remote "Transmitter SF01 01319004", Refsta Topdraft | CAME 18 bit | light, fan − / +, run-on | untested |
+| `novy_840029.yaml` | Novy with the white remote 840029 (all 10 pairing codes listed) | CAME 12 / 18 bit | light, power, fan − / + | untested |
+| `falmec_came16.yaml` | Falmec with direct speed keys | CAME 16 bit | on, speed 1–4, off | untested |
 | `luxair_came18.yaml` | Luxair (UK) with the RF remote | CAME 18 bit | light, fan − / + / off, timer | untested |
 | `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, needs 315 MHz modules | PT2262 24 bit | light, fan (step), power, timer | untested |
 
 *Untested* profiles come from published captures (Flipper Zero, other ESPHome projects – see [NOTICE](NOTICE));
-the receiver's decoder was checked against the raw Elica captures. Their power tables are placeholders – press
+the receiver's decoder was checked against raw captures of Elica (Flipper) and Neff (SIGNALduino) remotes. Their power tables are placeholders – press
 *Calibrate hood* (needs fan + up to boost and brighter / dimmer) or measure them. Optional keys are used when a
-remote has them: *fan off* for stop, *light on / off* instead of the toggle.
+remote has them: *fan off* for stop, *light on / off* instead of the toggle, *speed 1–4* to set a speed directly.
 
 **Another hood?** If its remote sends plain OOK frames at 433.92 MHz (most hood remotes do; rolling codes cannot
 work), copy the profile with the same frame format (`rf_bit_order: hl` = mark-space with a sync at the end, PT2262

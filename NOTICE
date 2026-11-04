@@ -27,6 +27,15 @@ written from published protocol facts and captures, gratefully acknowledged:
   https://github.com/josephdouce/esp-home-hob2hood-luxair
 - zephyr-hood-rf-esphome - James Malone - Apache-2.0 – Zephyr protocol (docs/PROTOCOL.md)
   https://github.com/james-malone/zephyr-hood-rf-esphome
+- RFFHEM (SIGNALduino) - RFD-FHEM - GPL-3.0 – protocol 86 and the BSH SF01 01319004 / Novy 840029 / 840039
+  remotes (FHEM/14_SD_UT.pm, SD_Protocols/Data.pm); facts and raw captures only, no code
+  https://github.com/RFD-FHEM/RFFHEM
+- esphome-novy - libussa – the frames of all 10 Novy pairing codes
+  https://github.com/libussa/esphome-novy
+- nl.novy.intouch - Homey app (GPL-3.0) – Novy frame structure (address + unit)
+  https://github.com/TheLostHomeyAppRepositories/nl.novy.intouch
+- falmec-hob2hood - Kristokarp – Falmec codes (rc-switch protocol 11)
+  https://github.com/Kristokarp/falmec-hob2hood
 
-Ciarko, Elica, Novy, Luxair, Zephyr, AEG, Electrolux, Hob²Hood, Thermomix, Shelly, M5Stack, Flipper Zero and Broadlink are trademarks of their respective owners.
+Ciarko, Elica, Novy, Luxair, Zephyr, Falmec, Bosch, Siemens, Neff, Constructa, Balay, AEG, Electrolux, Hob²Hood, Thermomix, Shelly, M5Stack, Flipper Zero and Broadlink are trademarks of their respective owners.
 This project is not affiliated with or endorsed by any of them.

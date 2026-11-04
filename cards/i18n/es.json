@@ -117,5 +117,9 @@
   "key_light_on": "luz on",
   "key_light_off": "luz off",
   "key_fan_off": "ventilador off",
-  "key_power": "encendido"
+  "key_power": "encendido",
+  "key_speed_1": "velocidad 1",
+  "key_speed_2": "velocidad 2",
+  "key_speed_3": "velocidad 3",
+  "key_speed_4": "velocidad 4"
 }

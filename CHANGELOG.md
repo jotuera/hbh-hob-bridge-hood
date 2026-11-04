@@ -10,8 +10,10 @@
   start pulse + space-mark, CAME) and `rf_start_high`; frames of 12 and 18 bits in one profile; optional keys
   `light_on`, `light_off`, `fan_off`, `power` (stop and the light use them when the remote has them);
   `rf_learn_keys` sets the keys of the wizard. Profiles must now define all `key_*` (`""` = no such key).
-- **New profiles (untested on hoods)**: Elica CAME 18-bit, Novy 840029, Luxair, Zephyr (315 MHz) – from published
-  captures; the receiver's decoder was checked against raw Elica captures.
+- **New profiles (untested on hoods)**: BSH SF01 01319004 (Bosch, Siemens, Neff, Constructa, Balay), Elica CAME
+  18-bit, Novy 840029 (all 10 pairing codes), Falmec (direct speeds), Luxair, Zephyr (315 MHz) – from published
+  captures; the receiver's decoder was checked against raw Elica (Flipper) and Neff (SIGNALduino) captures.
+- **Direct speed keys** `speed_1` … `speed_4`: a speed is set with one press when the remote has them.
 
 ## 0.1.0-beta – 2026-11-04
 

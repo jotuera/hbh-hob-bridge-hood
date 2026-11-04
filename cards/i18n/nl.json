@@ -117,5 +117,9 @@
   "key_light_on": "licht aan",
   "key_light_off": "licht uit",
   "key_fan_off": "ventilator uit",
-  "key_power": "aan / uit"
+  "key_power": "aan / uit",
+  "key_speed_1": "stand 1",
+  "key_speed_2": "stand 2",
+  "key_speed_3": "stand 3",
+  "key_speed_4": "stand 4"
 }

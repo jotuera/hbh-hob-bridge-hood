@@ -117,5 +117,9 @@
   "key_light_on": "światło wł.",
   "key_light_off": "światło wył.",
   "key_fan_off": "wentylator wył.",
-  "key_power": "zasilanie (wł. / wył.)"
+  "key_power": "zasilanie (wł. / wył.)",
+  "key_speed_1": "bieg 1",
+  "key_speed_2": "bieg 2",
+  "key_speed_3": "bieg 3",
+  "key_speed_4": "bieg 4"
 }

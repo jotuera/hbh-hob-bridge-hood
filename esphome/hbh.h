@@ -285,6 +285,14 @@ inline bool has_key(const std::string &key);
 // stop: a "fan off" key when the remote has one, else hold fan −
 inline void press_stop() { if (has_key("fan_off")) press("fan_off"); else press("fan_minus", RF_HOLD); }
 // light on / off: separate keys when the remote has them, else the toggle
+// a speed: its direct key when the remote has one (speed_1 … speed_4)
+inline bool press_speed(int s) {
+  if (s < 1 || s > 4) return false;
+  std::string k = "speed_" + std::to_string(s);
+  if (!has_key(k)) return false;
+  press(k);
+  return true;
+}
 inline void press_light(bool on) {
   if (on && has_key("light_on")) press("light_on");
   else if (!on && has_key("light_off")) press("light_off");
@@ -356,6 +364,7 @@ inline bool step(Job &j) {
             go(10); return false;
           }
           j.b = E.pb;
+          if (press_speed(target)) { go(3); return false; }
           for (int i = 0; i < std::abs(target - j.b); i++) press(target > j.b ? "fan_plus" : "fan_minus");
           go(3); return false;
         case 3:  // fast path: all presses at once, one check
@@ -367,7 +376,7 @@ inline bool step(Job &j) {
           if (E.pb == target) { rf_problem = false; return true; }
           if (j.n >= 6 || (j.n > 3 && E.pb == 0)) { rf_problem = true; ESP_LOGW(TAG, "speed %d not reached", target); return true; }
           j.b = E.pb; j.n++;
-          press(E.pb < target ? "fan_plus" : "fan_minus");
+          if (!press_speed(target)) press(E.pb < target ? "fan_plus" : "fan_minus");
           go(5); return false;
         case 5:  // wait for a change (12 s), then for a stable power
           if (!tx_idle()) { j.t = t; return false; }
@@ -384,7 +393,8 @@ inline bool step(Job &j) {
         case 11:
           if (E.pb == 0) { rf_problem = false; return true; }
           if (j.n >= 7) { rf_problem = true; return true; }
-          press("fan_minus"); j.n++; go(12); return false;
+          if (has_key("fan_minus")) press("fan_minus"); else press_stop();
+          j.n++; go(12); return false;
         case 12:
           if (tx_idle() && el() > 3) go(11);
           return false;
@@ -565,15 +575,18 @@ inline void manual_light() { B.auto_lit = false; }
 
 // ================================================================== keys of the remote, learning their codes
 // A profile defines the codes of the keys its remote has (key_* substitutions, "" = the remote has no such key):
-//   light (toggle), fan_minus, fan_plus, timer, brighter, dimmer, light_on, light_off, fan_off, power.
-// The brain uses fan_off for "stop" and light_on / light_off for the light when the remote has them, otherwise
-// a held fan − and the light toggle.
+//   light (toggle), fan_minus, fan_plus, timer, brighter, dimmer, light_on, light_off, fan_off, power,
+//   speed_1 … speed_4 (direct speed keys).
+// The brain uses fan_off for "stop", light_on / light_off for the light and speed_N to set a speed when the remote
+// has them, otherwise a held fan −, the light toggle and fan + / − steps.
 //
 // Learning: the receiver (hbh-remote-rx.yaml) sends the bits of every press – also of a remote it does not know.
 // The wizard asks for the keys of rf_learn_keys in order, each pressed twice (two equal frames, the toggle bit
 // ignored). The codes are kept in the ESP across restarts and override the profile – no YAML, no re-flashing.
-inline const char *const ALL_KEYS[10] = {"light", "fan_minus", "fan_plus", "timer", "brighter", "dimmer",
-                                         "light_on", "light_off", "fan_off", "power"};
+inline const int N_KEYS = 14;
+inline const char *const ALL_KEYS[N_KEYS] = {"light", "fan_minus", "fan_plus", "timer", "brighter", "dimmer",
+                                             "light_on", "light_off", "fan_off", "power",
+                                             "speed_1", "speed_2", "speed_3", "speed_4"};
 inline std::map<std::string, std::string> PROFILE_KEYS;   // codes of the profile – set by the YAML
 inline std::vector<std::string> LEARN_KEYS;               // keys the wizard asks for, in order
 struct Learn {

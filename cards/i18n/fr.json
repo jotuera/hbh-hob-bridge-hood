@@ -117,5 +117,9 @@
   "key_light_on": "lumière on",
   "key_light_off": "lumière off",
   "key_fan_off": "ventilation off",
-  "key_power": "marche / arrêt"
+  "key_power": "marche / arrêt",
+  "key_speed_1": "vitesse 1",
+  "key_speed_2": "vitesse 2",
+  "key_speed_3": "vitesse 3",
+  "key_speed_4": "vitesse 4"
 }

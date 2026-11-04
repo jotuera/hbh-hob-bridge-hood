@@ -1,0 +1,61 @@
+# HbH – hood profile: BSH hoods (Bosch, Siemens, Neff, Constructa, Balay) with the RF remote "Transmitter SF01 01319004"
+# 433.92 MHz, battery 23A – spare parts e.g. Siemens 00650879, Neff 12005563; also Refsta Topdraft. 5 keys:
+# fan + / −, light (toggle), run-on ("Nachlüften"), interval ventilation.
+#
+# Frame: CAME 18 bit (SIGNALduino protocol 86 "BOSCH | CAME | Novy | Neff | Refsta Topdraft": clock 350 µs,
+# 1 = 2 spaces + 1 mark, start = 44 spaces + 1 mark). 14 bits ident of the remote + 4 bits key.
+#
+# STATUS: from published captures – NOT tested on a hood by the author. The ident below is someone else's
+# remote: learn yours with the wizard ("Learn remote"). A second variant ("Typ2", a Bosch kitchen) has other key
+# bits – with the ident 00100110001110: plus 0100, minus 0010, light 0110, run-on 0001, interval 0101.
+# Interval ventilation (ident + 1101) has no key slot in HbH yet.
+#
+# Source: RFD-FHEM/RFFHEM (GPL-3.0) – FHEM/14_SD_UT.pm and SD_Protocols/Data.pm, issue #376 and
+# forum.fhem.de topic 93545; the raw captures were decoded with the HbH receiver algorithm.
+substitutions:
+  profile_name: "BSH SF01 01319004 (untested)"
+
+  # ---- RF frame (µs): CAME – start pulse, then every bit as (space, mark): 1 = long space + short mark
+  rf_one_high: "350"
+  rf_one_low: "700"
+  rf_zero_high: "700"
+  rf_zero_low: "350"
+  rf_start_high: "350"
+  rf_bit_order: "lh"
+  rf_sync_high: "0"
+  rf_sync_low: "15400"       # gap after a frame
+  rf_frame_bits: "18"
+  rf_toggle_bit: "-1"        # none
+  rf_short_frames: "8"
+  rf_hold_frames: "60"
+  rf_colour_frames: "60"
+
+  # ---- keys: full frames ("" = the remote has no such key)
+  key_light: "101000010101001110"         # light toggle
+  key_fan_minus: "101000010101001010"     # minus
+  key_fan_plus: "101000010101001100"      # plus
+  key_timer: "101000010101001001"         # run-on (Nachlüften)
+  key_brighter: ""
+  key_dimmer: ""
+  key_light_on: ""
+  key_light_off: ""
+  key_fan_off: ""
+  key_power: ""
+  key_speed_1: ""
+  key_speed_2: ""
+  key_speed_3: ""
+  key_speed_4: ""
+  # keys the learning wizard asks for, in this order
+  rf_learn_keys: "light,fan_plus,fan_minus,timer"
+
+  # ---- power table, net W above standby: NOT MEASURED for this hood – placeholders. Measure the hood with its
+  # Shelly and put the values here ("Calibrate hood" needs fan + up to boost and brighter / dimmer).
+  pw_standby: "0.5"
+  pw_fan1: "5"
+  pw_fan2: "12"
+  pw_fan3: "30"
+  pw_boost_min: "100"
+  pw_light1: "4"
+  pw_light2: "8"
+  pw_light3: "12"
+  pw_light4: "16"

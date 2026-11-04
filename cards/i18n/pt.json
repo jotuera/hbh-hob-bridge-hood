@@ -117,5 +117,9 @@
   "key_light_on": "luz lig.",
   "key_light_off": "luz desl.",
   "key_fan_off": "ventilador desl.",
-  "key_power": "ligar / desligar"
+  "key_power": "ligar / desligar",
+  "key_speed_1": "velocidade 1",
+  "key_speed_2": "velocidade 2",
+  "key_speed_3": "velocidade 3",
+  "key_speed_4": "velocidade 4"
 }

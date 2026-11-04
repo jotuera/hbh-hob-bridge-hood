@@ -117,5 +117,9 @@
   "key_light_on": "light on",
   "key_light_off": "light off",
   "key_fan_off": "fan off",
-  "key_power": "power (on / off)"
+  "key_power": "power (on / off)",
+  "key_speed_1": "speed 1",
+  "key_speed_2": "speed 2",
+  "key_speed_3": "speed 3",
+  "key_speed_4": "speed 4"
 }

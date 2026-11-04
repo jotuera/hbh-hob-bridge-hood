@@ -141,7 +141,8 @@ remote_receiver:
               {"${key_light}", "light"}, {"${key_fan_minus}", "fan_minus"}, {"${key_fan_plus}", "fan_plus"},
               {"${key_timer}", "timer"}, {"${key_brighter}", "brighter"}, {"${key_dimmer}", "dimmer"},
               {"${key_light_on}", "light_on"}, {"${key_light_off}", "light_off"}, {"${key_fan_off}", "fan_off"},
-              {"${key_power}", "power"}};
+              {"${key_power}", "power"}, {"${key_speed_1}", "speed_1"}, {"${key_speed_2}", "speed_2"},
+              {"${key_speed_3}", "speed_3"}, {"${key_speed_4}", "speed_4"}};
             for (auto &k : K) if (k[0][0]) CMD[k[0]] = k[1];
           }
           // frame lengths of the profile (CAME remotes mix 12- and 18-bit frames); others are cut-off frames

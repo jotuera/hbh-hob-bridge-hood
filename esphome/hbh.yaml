@@ -64,7 +64,8 @@ esphome:
             {"light", "${key_light}"}, {"fan_minus", "${key_fan_minus}"}, {"fan_plus", "${key_fan_plus}"},
             {"timer", "${key_timer}"}, {"brighter", "${key_brighter}"}, {"dimmer", "${key_dimmer}"},
             {"light_on", "${key_light_on}"}, {"light_off", "${key_light_off}"}, {"fan_off", "${key_fan_off}"},
-            {"power", "${key_power}"},
+            {"power", "${key_power}"}, {"speed_1", "${key_speed_1}"}, {"speed_2", "${key_speed_2}"},
+            {"speed_3", "${key_speed_3}"}, {"speed_4", "${key_speed_4}"},
           };
           {
             std::string l = "${rf_learn_keys}", w;
@@ -75,7 +76,7 @@ esphome:
           hbh::has_receiver = id(src_remote).state.find('.') != std::string::npos;
           // stored per key: (length << 58) | bits, 0 = not learned
           if (id(g_keys_valid)) {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < hbh::N_KEYS; i++) {
               uint64_t v = id(g_keys)[i];
               int n = (int) (v >> 58);
               if (n <= 0) continue;
@@ -87,7 +88,7 @@ esphome:
           }
           hbh::remote_pub = [](const std::string &v) { id(st_rkey).publish_state(v); };
           hbh::keys_store = []() {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < hbh::N_KEYS; i++) {
               uint64_t v = 0;
               auto it = hbh::KEYS.find(hbh::ALL_KEYS[i]);
               if (it != hbh::KEYS.end() && it->second.size() <= 58) {
@@ -183,7 +184,7 @@ globals:
     initial_value: 'false'
   # codes of the user's remote learned by the wizard (frame bits, MSB first, toggle bit 0) – override the profile
   - id: g_keys
-    type: std::array<uint64_t, 10>
+    type: std::array<uint64_t, 14>
     restore_value: true
   - id: g_keys_valid
     type: bool
@@ -242,6 +243,7 @@ script:
           else if (key == "fan_minus") hbh::on_cmd(held ? "stop" : "fan_minus");
           else if (key == "light") hbh::on_cmd(hbh::E.pl ? "light_off" : "light_on");
           else if (key == "fan_off") hbh::on_cmd("stop");
+          else if (key.rfind("speed_", 0) == 0) hbh::on_cmd("speed");
           else if (key == "light_on" || key == "light_off") hbh::on_cmd(key);
           else if ((key == "brighter" || key == "dimmer") && !held) hbh::on_cmd("brightness");
       - delay: !lambda "return id(burst_ms);"

@@ -54,14 +54,17 @@ kreator uczenia (krok 5) uczy się adresu Twojego pilota.
 |---|---|---|---|---|
 | `ciarko_xy8011.yaml` | Ciarko z pilotem XY8011-RF – Duo 74, SU Mini | 36 bitów, bit przełączający | światło, bieg − / +, timer, jaśniej, ciemniej | **przetestowany** |
 | `elica_came18.yaml` | Elica (i okapy, które Elica robi dla innych marek) z 6-przyciskowym pilotem RF | CAME 18 bitów | światło wł. / wył. / przełącz, bieg − / + / wył. | nieprzetestowany |
-| `novy_840029.yaml` | Novy z białym pilotem 840029 | CAME 12 / 18 bitów | światło, zasilanie, bieg − / + | nieprzetestowany |
+| `bsh_sf01_01319004.yaml` | **Bosch, Siemens, Neff, Constructa, Balay** (BSH) z pilotem „Transmitter SF01 01319004”, Refsta Topdraft | CAME 18 bitów | światło, bieg − / +, dobieg | nieprzetestowany |
+| `novy_840029.yaml` | Novy z białym pilotem 840029 (wszystkie 10 kodów parowania) | CAME 12 / 18 bitów | światło, zasilanie, bieg − / + | nieprzetestowany |
+| `falmec_came16.yaml` | Falmec z bezpośrednimi biegami | CAME 16 bitów | wł., bieg 1–4, wył. | nieprzetestowany |
 | `luxair_came18.yaml` | Luxair (UK) z pilotem RF | CAME 18 bitów | światło, bieg − / + / wył., timer | nieprzetestowany |
 | `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, potrzebne moduły 315 MHz | PT2262 24 bity | światło, wentylator (krok), zasilanie, timer | nieprzetestowany |
 
 Profile *nieprzetestowane* pochodzą z opublikowanych nagrań (Flipper Zero, inne projekty ESPHome – zobacz
-[NOTICE](NOTICE)); dekoder odbiornika sprawdzono na surowych nagraniach Elica. Ich tabele mocy są orientacyjne –
+[NOTICE](NOTICE)); dekoder odbiornika sprawdzono na surowych nagraniach pilotów Elica (Flipper) i Neff (SIGNALduino). Ich tabele mocy są orientacyjne –
 naciśnij *Kalibruj okap* (wymaga biegu + aż do boost i jaśniej / ciemniej) albo je zmierz. Opcjonalne przyciski są
-używane, gdy pilot je ma: *wentylator wył.* jako stop, *światło wł. / wył.* zamiast przełączania.
+używane, gdy pilot je ma: *wentylator wył.* jako stop, *światło wł. / wył.* zamiast przełączania, *bieg 1–4* do
+bezpośredniego ustawienia biegu.
 
 **Inny okap?** Jeśli pilot nadaje zwykłe ramki OOK na 433,92 MHz (większość pilotów okapów; kody kroczące nie
 zadziałają), skopiuj profil o tym samym formacie ramki (`rf_bit_order: hl` = impuls-przerwa z synchronizacją na końcu,

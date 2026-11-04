@@ -38,6 +38,10 @@ substitutions:
   key_light_on: ""
   key_light_off: ""
   key_fan_off: ""
+  key_speed_1: ""
+  key_speed_2: ""
+  key_speed_3: ""
+  key_speed_4: ""
   # keys the learning wizard asks for, in this order
   rf_learn_keys: "light,fan_plus,power,timer"
 

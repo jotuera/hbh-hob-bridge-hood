@@ -117,5 +117,9 @@
   "key_light_on": "světlo zap.",
   "key_light_off": "světlo vyp.",
   "key_fan_off": "ventilátor vyp.",
-  "key_power": "napájení (zap. / vyp.)"
+  "key_power": "napájení (zap. / vyp.)",
+  "key_speed_1": "stupeň 1",
+  "key_speed_2": "stupeň 2",
+  "key_speed_3": "stupeň 3",
+  "key_speed_4": "stupeň 4"
 }
