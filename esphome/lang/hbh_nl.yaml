@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Kalibratie mislukt"
   t_cal_aborted: "Kalibratie afgebroken"
   t_cal_profile: "Tabel uit profiel"
+  # ---- learning the remote
+  n_lrn_start: "Afstandsbediening aanleren"
+  n_lrn_reset: "Codes van profiel herstellen"
+  n_lrn_state: "Codes afstandsbediening"
+  t_lrn_running: "Aanleren"
+  t_lrn_ok: "Aangeleerd"
+  t_lrn_profile: "Codes uit profiel"
+  t_lrn_aborted: "Aanleren afgebroken"
+  t_lrn_norx: "Geen ontvanger"
+  n_remote_key: "Toets afstandsbediening"

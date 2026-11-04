@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Kalibracja nieudana"
   t_cal_aborted: "Kalibracja przerwana"
   t_cal_profile: "Tabela z profilu"
+  # ---- learning the remote
+  n_lrn_start: "Naucz pilota"
+  n_lrn_reset: "Przywróć kody z profilu"
+  n_lrn_state: "Kody pilota"
+  t_lrn_running: "Uczenie"
+  t_lrn_ok: "Nauczone"
+  t_lrn_profile: "Kody z profilu"
+  t_lrn_aborted: "Uczenie przerwane"
+  t_lrn_norx: "Brak odbiornika pilota"
+  n_remote_key: "Klawisz pilota"

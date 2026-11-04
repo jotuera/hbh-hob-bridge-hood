@@ -102,5 +102,16 @@
   "filter_row": "Filtr tłuszczowy",
   "filter_due": "Wyczyść filtr tłuszczowy",
   "last_cooking": "Ostatnie gotowanie",
-  "calibrate_hint": "okap sam przełączy wszystkie biegi i poziomy światła (~4 min)"
+  "calibrate_hint": "okap sam przełączy wszystkie biegi i poziomy światła (~4 min)",
+  "learn_press": "Naciśnij na oryginalnym pilocie",
+  "learn_twice": "dwa razy, jeden po drugim",
+  "learn_again": "jeszcze raz",
+  "learn_cancel": "Anuluj",
+  "learn_hint": "okap może reagować – to normalne",
+  "key_light": "światło",
+  "key_fan_minus": "bieg −",
+  "key_fan_plus": "bieg +",
+  "key_timer": "timer",
+  "key_brighter": "jaśniej (klawisz 4)",
+  "key_dimmer": "ciemniej (klawisz 5)"
 }

@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Kalibrálás sikertelen"
   t_cal_aborted: "Kalibrálás megszakítva"
   t_cal_profile: "Profil táblázata"
+  # ---- learning the remote
+  n_lrn_start: "Távirányító betanítása"
+  n_lrn_reset: "Profil kódjainak visszaállítása"
+  n_lrn_state: "Távirányító kódjai"
+  t_lrn_running: "Betanítás"
+  t_lrn_ok: "Betanítva"
+  t_lrn_profile: "Profil kódjai"
+  t_lrn_aborted: "Betanítás megszakítva"
+  t_lrn_norx: "Nincs távirányító-vevő"
+  n_remote_key: "Távirányító gombja"

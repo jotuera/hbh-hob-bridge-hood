@@ -102,5 +102,16 @@
   "filter_row": "Vetfilter",
   "filter_due": "Vetfilter reinigen",
   "last_cooking": "Laatste kookbeurt",
-  "calibrate_hint": "de afzuigkap doorloopt zelf alle standen en lichtniveaus (~4 min)"
+  "calibrate_hint": "de afzuigkap doorloopt zelf alle standen en lichtniveaus (~4 min)",
+  "learn_press": "Druk op de originele afstandsbediening",
+  "learn_twice": "twee keer na elkaar",
+  "learn_again": "nog een keer",
+  "learn_cancel": "Annuleren",
+  "learn_hint": "de afzuigkap mag reageren",
+  "key_light": "licht",
+  "key_fan_minus": "ventilator −",
+  "key_fan_plus": "ventilator +",
+  "key_timer": "timer",
+  "key_brighter": "helderder (toets 4)",
+  "key_dimmer": "donkerder (toets 5)"
 }

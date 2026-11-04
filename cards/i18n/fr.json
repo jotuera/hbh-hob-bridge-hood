@@ -102,5 +102,16 @@
   "filter_row": "Filtre à graisse",
   "filter_due": "Nettoyez le filtre à graisse",
   "last_cooking": "Dernière cuisson",
-  "calibrate_hint": "la hotte passe seule toutes les vitesses et tous les niveaux de lumière (~4 min)"
+  "calibrate_hint": "la hotte passe seule toutes les vitesses et tous les niveaux de lumière (~4 min)",
+  "learn_press": "Appuyez sur la télécommande d'origine",
+  "learn_twice": "deux fois de suite",
+  "learn_again": "encore une fois",
+  "learn_cancel": "Annuler",
+  "learn_hint": "la hotte peut réagir – c'est normal",
+  "key_light": "lumière",
+  "key_fan_minus": "ventilation −",
+  "key_fan_plus": "ventilation +",
+  "key_timer": "minuterie",
+  "key_brighter": "plus clair (touche 4)",
+  "key_dimmer": "plus sombre (touche 5)"
 }

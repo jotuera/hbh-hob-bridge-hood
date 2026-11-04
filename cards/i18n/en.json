@@ -102,5 +102,16 @@
   "filter_row": "Grease filter",
   "filter_due": "Clean the grease filter",
   "last_cooking": "Last cooking",
-  "calibrate_hint": "the hood switches through all speeds and light levels by itself (~4 min)"
+  "calibrate_hint": "the hood switches through all speeds and light levels by itself (~4 min)",
+  "learn_press": "Press on the original remote",
+  "learn_twice": "twice, one after the other",
+  "learn_again": "once more",
+  "learn_cancel": "Cancel",
+  "learn_hint": "the hood may react – that is fine",
+  "key_light": "light",
+  "key_fan_minus": "fan −",
+  "key_fan_plus": "fan +",
+  "key_timer": "timer",
+  "key_brighter": "brighter (key 4)",
+  "key_dimmer": "dimmer (key 5)"
 }

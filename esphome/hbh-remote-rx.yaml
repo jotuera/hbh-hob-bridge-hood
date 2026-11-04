@@ -7,12 +7,14 @@
 # key was held. key = light / fan_minus / fan_plus / timer / brighter / dimmer. The toggle bit is ignored for
 # recognition; a change of the toggle bit = a new press.
 #
-# The same press is also published as the text sensor "Remote event" = "seq|key|frames|held_ms" – set it as
+# The same press is also published as the text sensor "Remote event" = "seq|key|frames|held_ms|bits" – set it as
 # "Source: remote receiver" of hbh.yaml, so the brain knows when someone used the remote (it ignores the echo of
-# its own transmitter).
+# its own transmitter). bits = the frame with the toggle bit 0.
 #
-# Frames that match no key of the profile are counted and logged (INFO "unknown frame: <bits>") –
-# tools/learn_codes.py turns them into the key_* lines of a profile.
+# A frame that matches no key of the profile is a press with key "unknown" (and its bits): the learning wizard of
+# hbh.yaml learns the user's remote from it, and the hood ESP recognises the keys by the learned codes – the
+# receiver itself needs no codes of the user's remote. Unknown frames are also counted and logged
+# (INFO "unknown frame: <bits>") for tools/learn_codes.py.
 #
 # In HA: Settings → Devices & services → ESPHome → this device → Configure →
 # enable "Allow the device to perform Home Assistant actions", otherwise no events arrive.
@@ -61,6 +63,9 @@ globals:
   - id: g_cmd
     type: std::string
     initial_value: '""'
+  - id: g_bits           # frame of the press being received, toggle bit 0
+    type: std::string
+    initial_value: '""'
   - id: g_frames
     type: int
     initial_value: '0'
@@ -81,11 +86,22 @@ globals:
     initial_value: '0'
 
 script:
+  # the press being received is complete -> report it (an unknown frame only when repeated: a remote sends a burst,
+  # a single frame is more likely another 433 MHz device)
+  - id: flush
+    then:
+      - lambda: |-
+          int held = (int) (id(g_last) - id(g_start)) + (int) ((${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_sync_high} + ${rf_sync_low}) / 1000);
+          if (id(g_cmd) != "unknown" || id(g_frames) >= 2) id(report).execute(id(g_cmd), id(g_frames), held, id(g_bits));
+          id(g_frames) = 0; id(g_cmd) = ""; id(g_bits) = "";
   - id: report
+    mode: queued        # two quick presses: the second must not be dropped while the LED blinks
+    max_runs: 5
     parameters:
       key: string
       frames: int
       held_ms: int
+      bits: string
     then:
       - homeassistant.event:
           event: esphome.hbh_remote
@@ -93,14 +109,15 @@ script:
             key: !lambda "return key;"
             frames: !lambda "return frames;"
             held_ms: !lambda "return held_ms;"
+            bits: !lambda "return bits;"
       - text_sensor.template.publish:
           id: last_key
           state: !lambda 'return key + " ×" + to_string(frames);'
-      # for the brain of hbh.yaml: "seq|key|frames|held_ms" (seq makes every press a new state)
+      # for the brain of hbh.yaml: "seq|key|frames|held_ms|bits" (seq makes every press a new state)
       - lambda: |-
           static uint32_t seq = 0;
           seq++;
-          id(remote_event).publish_state(to_string(seq) + "|" + key + "|" + to_string(frames) + "|" + to_string(held_ms));
+          id(remote_event).publish_state(to_string(seq) + "|" + key + "|" + to_string(frames) + "|" + to_string(held_ms) + "|" + bits);
       - light.turn_on: {id: led, brightness: 30%, red: 100%, green: 40%, blue: 0%}
       - delay: 150ms
       - light.turn_off: led
@@ -154,23 +171,26 @@ remote_receiver:
           std::string cmd;
           for (auto &p : CMD) { std::string k = p.first; if (TB >= 0 && TB < (int) k.size()) k[TB] = '0'; if (k == norm) { cmd = p.second; break; } }
           if (cmd.empty()) {
+            // a remote the profile does not know (e.g. the user's own, before learning): still a press, key
+            // "unknown" with its bits – the wizard of hbh.yaml learns from it
             id(cnt_foreign)++;
             static uint32_t t_unknown = 0;
             if (millis() - t_unknown > 300) { t_unknown = millis(); ESP_LOGI("rx", "unknown frame: %s", bits.c_str()); }
-            return;
+            cmd = "unknown";
+          } else {
+            id(cnt_ok)++;
           }
           uint32_t now = millis();
           static char g_tgl = 0;
-          bool same_press = (cmd == id(g_cmd) && tgl == g_tgl && now - id(g_last) < 300);
+          bool same_press = (norm == id(g_bits) && tgl == g_tgl && now - id(g_last) < 300);
           g_tgl = tgl;
           if (same_press) {
             id(g_frames)++;
           } else {
-            if (id(g_frames) > 0) id(report).execute(id(g_cmd), id(g_frames), (int) (id(g_last) - id(g_start)) + (int) ((${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_sync_high} + ${rf_sync_low}) / 1000));
-            id(g_cmd) = cmd; id(g_frames) = 1; id(g_start) = now;
+            if (id(g_frames) > 0) id(flush).execute();
+            id(g_cmd) = cmd; id(g_bits) = norm; id(g_frames) = 1; id(g_start) = now;
           }
           id(g_last) = now;
-          id(cnt_ok)++;
 
 interval:
   # counters to HA every 5 s (not on every noise packet)
@@ -184,10 +204,7 @@ interval:
   - interval: 50ms
     then:
       - lambda: |-
-          if (id(g_frames) > 0 && millis() - id(g_last) > 250) {
-            id(report).execute(id(g_cmd), id(g_frames), (int) (id(g_last) - id(g_start)) + (int) ((${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_sync_high} + ${rf_sync_low}) / 1000));
-            id(g_frames) = 0; id(g_cmd) = "";
-          }
+          if (id(g_frames) > 0 && millis() - id(g_last) > 250) id(flush).execute();
 
 light:
   - platform: esp32_rmt_led_strip

@@ -102,5 +102,16 @@
   "filter_row": "Filtro de gordura",
   "filter_due": "Limpe o filtro de gordura",
   "last_cooking": "Última cozedura",
-  "calibrate_hint": "o exaustor percorre sozinho todas as velocidades e níveis de luz (~4 min)"
+  "calibrate_hint": "o exaustor percorre sozinho todas as velocidades e níveis de luz (~4 min)",
+  "learn_press": "Prima no comando original",
+  "learn_twice": "duas vezes seguidas",
+  "learn_again": "mais uma vez",
+  "learn_cancel": "Cancelar",
+  "learn_hint": "o exaustor pode reagir – é normal",
+  "key_light": "luz",
+  "key_fan_minus": "ventilador −",
+  "key_fan_plus": "ventilador +",
+  "key_timer": "temporizador",
+  "key_brighter": "mais luz (tecla 4)",
+  "key_dimmer": "menos luz (tecla 5)"
 }

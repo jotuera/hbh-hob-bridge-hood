@@ -102,5 +102,16 @@
   "filter_row": "Fettfilter",
   "filter_due": "Fettfilter reinigen",
   "last_cooking": "Letztes Kochen",
-  "calibrate_hint": "die Haube schaltet selbst alle Stufen und Lichtstufen durch (~4 min)"
+  "calibrate_hint": "die Haube schaltet selbst alle Stufen und Lichtstufen durch (~4 min)",
+  "learn_press": "Drücken Sie auf der Original-Fernbedienung",
+  "learn_twice": "zweimal nacheinander",
+  "learn_again": "noch einmal",
+  "learn_cancel": "Abbrechen",
+  "learn_hint": "die Haube darf dabei reagieren",
+  "key_light": "Licht",
+  "key_fan_minus": "Lüfter −",
+  "key_fan_plus": "Lüfter +",
+  "key_timer": "Timer",
+  "key_brighter": "heller (Taste 4)",
+  "key_dimmer": "dunkler (Taste 5)"
 }

@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Kalibrierung fehlgeschlagen"
   t_cal_aborted: "Kalibrierung abgebrochen"
   t_cal_profile: "Tabelle aus dem Profil"
+  # ---- learning the remote
+  n_lrn_start: "Fernbedienung anlernen"
+  n_lrn_reset: "Codes des Profils wiederherstellen"
+  n_lrn_state: "Codes der Fernbedienung"
+  t_lrn_running: "Anlernen"
+  t_lrn_ok: "Angelernt"
+  t_lrn_profile: "Codes aus dem Profil"
+  t_lrn_aborted: "Anlernen abgebrochen"
+  t_lrn_norx: "Kein Fernbedienungsempfänger"
+  n_remote_key: "Taste der Fernbedienung"

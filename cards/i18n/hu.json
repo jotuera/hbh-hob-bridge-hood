@@ -102,5 +102,16 @@
   "filter_row": "Zsírszűrő",
   "filter_due": "Tisztítsd ki a zsírszűrőt",
   "last_cooking": "Utolsó főzés",
-  "calibrate_hint": "a páraelszívó magától végigmegy minden fokozaton és fényszinten (~4 perc)"
+  "calibrate_hint": "a páraelszívó magától végigmegy minden fokozaton és fényszinten (~4 perc)",
+  "learn_press": "Nyomja meg az eredeti távirányítón",
+  "learn_twice": "kétszer egymás után",
+  "learn_again": "még egyszer",
+  "learn_cancel": "Mégse",
+  "learn_hint": "a páraelszívó reagálhat – ez rendben van",
+  "key_light": "világítás",
+  "key_fan_minus": "ventilátor −",
+  "key_fan_plus": "ventilátor +",
+  "key_timer": "időzítő",
+  "key_brighter": "világosabb (4. gomb)",
+  "key_dimmer": "sötétebb (5. gomb)"
 }

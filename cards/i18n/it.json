@@ -102,5 +102,16 @@
   "filter_row": "Filtro grassi",
   "filter_due": "Pulisci il filtro grassi",
   "last_cooking": "Ultima cottura",
-  "calibrate_hint": "la cappa passa da sola tutte le velocità e i livelli di luce (~4 min)"
+  "calibrate_hint": "la cappa passa da sola tutte le velocità e i livelli di luce (~4 min)",
+  "learn_press": "Premi sul telecomando originale",
+  "learn_twice": "due volte di seguito",
+  "learn_again": "ancora una volta",
+  "learn_cancel": "Annulla",
+  "learn_hint": "la cappa può reagire – è normale",
+  "key_light": "luce",
+  "key_fan_minus": "ventola −",
+  "key_fan_plus": "ventola +",
+  "key_timer": "timer",
+  "key_brighter": "più luce (tasto 4)",
+  "key_dimmer": "meno luce (tasto 5)"
 }

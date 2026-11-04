@@ -102,5 +102,16 @@
   "filter_row": "Tukový filter",
   "filter_due": "Vyčistite tukový filter",
   "last_cooking": "Posledné varenie",
-  "calibrate_hint": "digestor sám prejde všetky stupne a úrovne svetla (~4 min)"
+  "calibrate_hint": "digestor sám prejde všetky stupne a úrovne svetla (~4 min)",
+  "learn_press": "Stlačte na originálnom ovládači",
+  "learn_twice": "dvakrát po sebe",
+  "learn_again": "ešte raz",
+  "learn_cancel": "Zrušiť",
+  "learn_hint": "digestor môže reagovať – to je v poriadku",
+  "key_light": "svetlo",
+  "key_fan_minus": "ventilátor −",
+  "key_fan_plus": "ventilátor +",
+  "key_timer": "časovač",
+  "key_brighter": "jasnejšie (tlačidlo 4)",
+  "key_dimmer": "tmavšie (tlačidlo 5)"
 }
