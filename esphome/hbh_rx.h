@@ -124,4 +124,11 @@ class Tracker {
   uint32_t start_ = 0, last_ = 0;
 };
 
+// the tracker of a receiver of its own (hbh-remote-rx.yaml) – not an ESPHome global: globals are declared
+// before the includes
+inline Tracker &tracker() {
+  static Tracker t;
+  return t;
+}
+
 }  // namespace hbh_rx

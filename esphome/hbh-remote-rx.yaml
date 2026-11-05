@@ -62,8 +62,6 @@ wifi:
 captive_portal:
 
 globals:
-  - id: rx_tracker       # the press being received (hbh_rx.h)
-    type: hbh_rx::Tracker
   - id: cnt_ok
     type: uint32_t
     initial_value: '0'
@@ -152,7 +150,7 @@ remote_receiver:
             id(cnt_ok)++;
           }
           hbh_rx::Press done;
-          if (id(rx_tracker).feed(key, norm, hbh_rx::toggle(bits, F.tb), millis(), F.frame_ms(), &done))
+          if (hbh_rx::tracker().feed(key, norm, hbh_rx::toggle(bits, F.tb), millis(), F.frame_ms(), &done))
             id(report).execute(done.key, done.frames, done.held_ms, done.bits);
 
 interval:
@@ -169,7 +167,7 @@ interval:
       - lambda: |-
           hbh_rx::Press done;
           const int frame_ms = (${rf_frame_bits} * (${rf_one_high} + ${rf_one_low} + ${rf_zero_high} + ${rf_zero_low}) / 2 + ${rf_start_high} + ${rf_sync_high} + ${rf_sync_low}) / 1000;
-          if (id(rx_tracker).poll(millis(), frame_ms, &done)) id(report).execute(done.key, done.frames, done.held_ms, done.bits);
+          if (hbh_rx::tracker().poll(millis(), frame_ms, &done)) id(report).execute(done.key, done.frames, done.held_ms, done.bits);
 
 light:
   - platform: esp32_rmt_led_strip
