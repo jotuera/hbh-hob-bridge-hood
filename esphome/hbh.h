@@ -664,12 +664,16 @@ inline void learn_frame(const std::string &bits) {
 // event from the receiver of the original remote: "seq|key|frames|held_ms|bits" (bits since 0.2.0;
 // key = "unknown" for a frame the receiver's profile does not know)
 inline void on_remote(const std::string &v, bool live = false) {
+  // the first state after boot is the one HA restores (a past press) – skipped. Any first state counts, also
+  // "unknown" of a receiver that restarted: otherwise its first real press would be taken for the restored state.
+  static bool seen = false;
   static std::string last_seq;
+  bool first = !seen && !live; seen = true;
   size_t a = v.find('|'); if (a == std::string::npos) return;
   std::string seq = v.substr(0, a);
   if (seq == last_seq) return;
-  bool first = last_seq.empty(); last_seq = seq;
-  if (first && !live) return;                          // state restored at boot, not a new press
+  last_seq = seq;
+  if (first) return;                                   // state restored at boot, not a new press
   size_t b = v.find('|', a + 1), c = v.find('|', b + 1);
   if (b == std::string::npos || c == std::string::npos) return;
   std::string k = v.substr(a + 1, b - a - 1);
