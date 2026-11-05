@@ -14,6 +14,10 @@
   18-bit, Novy 840029 (all 10 pairing codes), Falmec (direct speeds), Luxair, Zephyr (315 MHz) – from published
   captures; the receiver's decoder was checked against raw Elica (Flipper) and Neff (SIGNALduino) captures.
 - **Direct speed keys** `speed_1` … `speed_4`: a speed is set with one press when the remote has them.
+- **One Atom** (`hbh-one.yaml`, untested on hardware): transmitter and receiver on one Atom Lite with a Grove hub;
+  presses of the original remote decoded on the ESP, no echo of the own transmitter, HA event kept.
+- **Shared decoder** `esphome/hbh_rx.h` for `hbh-remote-rx.yaml` and `hbh-one.yaml`; `tools/test_profiles.py --cpp`
+  compiles it on the host and compares it packet by packet with the Python mirror.
 - **Calibration for other remotes**: direct speed keys instead of fan + steps, one light level when the remote
   cannot dim, no boost when the hood has none (the boost threshold is then out of reach).
 - **`tools/test_profiles.py`** (in CI): profile structure, transmitter → receiver round trips (clean, jitter, short

@@ -114,6 +114,12 @@ toggle bit as the previous one (it takes it as the same key still held). The tra
 
 No soldering. Put the transmitter within a few metres of the hood – not inside a metal cabinet.
 
+**One Atom for both (`hbh-one.yaml`, untested on hardware):** an Atom Lite with a Grove hub (e.g. M5Stack Unit HUB
+U006) and both units – the RF433T sends on G26, the RF433R outputs on G32. Add `one: !include hbh/hbh-one.yaml` to
+the packages of the hood device (after `hood:`), leave *Source: remote receiver* empty: the presses of the original
+remote are decoded on the ESP itself (no HA in between), the own transmissions are skipped (no echo), the wizard
+works the same and the HA event `esphome.hbh_remote` still fires.
+
 ## Installation
 
 ### 1. ESPHome
@@ -349,7 +355,6 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## Roadmap
 
 - More hood profiles – other key layouts, IR remotes, other frequencies (CC1101).
-- One Atom with both units (Grove hub: RF433T on G26, RF433R on G32) and echo suppression on the ESP.
 - HACS for the cards.
 
 ## Support

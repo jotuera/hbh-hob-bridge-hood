@@ -39,6 +39,7 @@ esphome:
   name: ${name}
   friendly_name: ${friendly_name}
   includes:
+    - hbh_rx.h           # decoder of the original remote (used by hbh.h for hbh-one.yaml)
     - hbh.h
   on_boot:
     # after the config entities are restored, before Home Assistant connects
@@ -73,7 +74,13 @@ esphome:
           }
           hbh::FRAME_BITS = ${rf_frame_bits};
           hbh::TOGGLE_BIT = ${rf_toggle_bit};
-          hbh::has_receiver = id(src_remote).state.find('.') != std::string::npos;
+          hbh::has_receiver = hbh::rx_builtin || id(src_remote).state.find('.') != std::string::npos;
+          // frame of the profile for the built-in receiver (hbh-one.yaml)
+          hbh::RXF.one_h = ${rf_one_high}; hbh::RXF.one_l = ${rf_one_low}; hbh::RXF.zero_h = ${rf_zero_high}; hbh::RXF.zero_l = ${rf_zero_low};
+          hbh::RXF.start = ${rf_start_high}; hbh::RXF.sync_h = ${rf_sync_high}; hbh::RXF.sync_l = ${rf_sync_low};
+          hbh::RXF.nb = ${rf_frame_bits}; hbh::RXF.tb = ${rf_toggle_bit}; hbh::RXF.lh = std::string("${rf_bit_order}") == "lh";
+          hbh::RX_LENS = {${rf_frame_bits}};
+          for (auto &p : hbh::PROFILE_KEYS) if (!p.second.empty()) hbh::RX_LENS.push_back((int) p.second.size());
           // stored per key: (length << 58) | bits, 0 = not learned
           if (id(g_keys_valid)) {
             for (int i = 0; i < hbh::N_KEYS; i++) {

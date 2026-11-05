@@ -12,6 +12,7 @@
 // 5. Night reset: at a set time the hood relay is cut for 15 s when the hood still draws power.
 // 6. Statistics: hob energy today / of the last cooking, grease-filter usage (fan hours weighted by speed).
 // 7. Calibration: measures the hood's power table by itself (any hood) and keeps it across restarts.
+// 9. One Atom (hbh-one.yaml): the receiver of the original remote on the same ESP – decoded here, no HA in between.
 // 8. Keys of the remote: the profile's codes or codes learned through the receiver (kept across restarts);
 //    optional keys (fan off, light on / off) are used when the remote has them.
 // All sources are Home Assistant entities chosen at runtime (text entities, applied after a restart).
@@ -25,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include "hbh_rx.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/log.h"
 #include "esphome/components/api/api_server.h"
@@ -661,13 +663,13 @@ inline void learn_frame(const std::string &bits) {
 
 // event from the receiver of the original remote: "seq|key|frames|held_ms|bits" (bits since 0.2.0;
 // key = "unknown" for a frame the receiver's profile does not know)
-inline void on_remote(const std::string &v) {
+inline void on_remote(const std::string &v, bool live = false) {
   static std::string last_seq;
   size_t a = v.find('|'); if (a == std::string::npos) return;
   std::string seq = v.substr(0, a);
   if (seq == last_seq) return;
   bool first = last_seq.empty(); last_seq = seq;
-  if (first) return;                                   // state restored at boot, not a new press
+  if (first && !live) return;                          // state restored at boot, not a new press
   size_t b = v.find('|', a + 1), c = v.find('|', b + 1);
   if (b == std::string::npos || c == std::string::npos) return;
   std::string k = v.substr(a + 1, b - a - 1);
@@ -687,6 +689,40 @@ inline void on_remote(const std::string &v) {
   else if ((k == "brighter" || k == "dimmer") && held >= 2500) colour = k == "brighter" ? "cool" : "warm";
   else if (k == "brighter" || k == "dimmer") on_cmd("brightness");
   else if (k == "timer" && E.pb > 0) timer_end = now_ms() + 600000;
+}
+
+// ---------------------------------------------------------------- built-in receiver (hbh-one.yaml)
+// The receiver's frames are decoded on this ESP with the profile and the learned codes; own transmissions are
+// skipped while the transmitter is busy (no echo). Every press goes to on_remote() like the event of a receiver of
+// its own, and to the HA event esphome.hbh_remote.
+inline hbh_rx::Frame RXF;                         // frame of the profile – set by the YAML
+inline std::vector<int> RX_LENS;
+inline bool rx_builtin = false;
+inline uint32_t rx_seq = 0;
+inline hbh_rx::Tracker RXT;
+inline std::function<void(const hbh_rx::Press &)> rx_event;   // HA event – provided by hbh-one.yaml
+inline bool use_rx_builtin() { rx_builtin = true; has_receiver = true; return true; }
+
+inline void rx_report(const hbh_rx::Press &p) {
+  std::string v = std::to_string(++rx_seq) + "|" + p.key + "|" + std::to_string(p.frames) + "|" + std::to_string(p.held_ms) + "|" + p.bits;
+  on_remote(v, true);
+  if (rx_event && p.key != "unknown") rx_event(p);
+}
+inline void rx_raw(const std::vector<int32_t> &x) {
+  if ((tx_busy && tx_busy()) || age_s(last_tx) < 0.2f) return;   // own transmission
+  std::string bits = hbh_rx::decode(RXF, RX_LENS, x);
+  if (bits.empty()) return;
+  std::string n = hbh_rx::norm(bits, RXF.tb), key = key_of_bits(bits);   // learned codes first
+  if (key.empty())
+    for (auto &p : PROFILE_KEYS)
+      if (!p.second.empty() && hbh_rx::norm(p.second, RXF.tb) == n) { key = p.first; break; }
+  if (key.empty()) key = "unknown";
+  hbh_rx::Press done;
+  if (RXT.feed(key, n, hbh_rx::toggle(bits, RXF.tb), now_ms(), RXF.frame_ms(), &done)) rx_report(done);
+}
+inline void rx_poll() {
+  hbh_rx::Press done;
+  if (rx_builtin && RXT.poll(now_ms(), RXF.frame_ms(), &done)) rx_report(done);
 }
 
 inline void end_session() {

@@ -33,7 +33,7 @@ jobs:
       - name: Python tools compile
         run: python3 -m py_compile tools/*.py
       - name: Hood profiles – structure, transmitter → receiver round trips, published captures of real remotes
-        run: python3 tools/test_profiles.py --online
+        run: python3 tools/test_profiles.py --online --cpp
 
   config:
     name: ESPHome config (all languages)
@@ -50,7 +50,7 @@ jobs:
       - name: Validate every device file
         run: |
           fail=0
-          for f in build/ci/hood_*.yaml build/ci/rx_*.yaml; do
+          for f in build/ci/hood_*.yaml build/ci/rx_*.yaml build/ci/one_*.yaml; do
             if esphome -q config "$f" > /dev/null 2> err.txt; then
               echo "ok   $f"
             else
@@ -67,7 +67,7 @@ jobs:
       fail-fast: false
       matrix:
         # the tested profile in English, and a CAME profile (other frame format)
-        device: [hood_en, rx_en, hood_elica_came18, rx_elica_came18]
+        device: [hood_en, rx_en, one_en, hood_elica_came18, rx_elica_came18]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

@@ -114,6 +114,12 @@ trzymanie). Nadajnik z tego repo przełącza go jak pilot.
 
 Bez lutowania. Nadajnik kilka metrów od okapu – nie w metalowej szafce.
 
+**Jeden Atom do obu (`hbh-one.yaml`, nieprzetestowany na sprzęcie):** Atom Lite z hubem Grove (np. M5Stack Unit HUB
+U006) i oboma modułami – RF433T nadaje na G26, RF433R podaje dane na G32. Dopisz `one: !include hbh/hbh-one.yaml` do
+packages urządzenia okapu (po `hood:`), *Źródło: pilot (odbiornik)* zostaw puste: naciśnięcia oryginalnego pilota
+są dekodowane w samym ESP (bez HA po drodze), własne nadawanie jest pomijane (bez echa), kreator działa tak samo, a
+zdarzenie HA `esphome.hbh_remote` dalej przychodzi.
+
 ## Instalacja
 
 ### 1. ESPHome
@@ -348,7 +354,6 @@ kontrolny + bit przełączający + `010`), czasy, kody klawiszy, co robi przytrz
 ## Plany
 
 - Więcej profili okapów – inne układy klawiszy, piloty IR, inne częstotliwości (CC1101).
-- Jeden Atom z oboma modułami (hub Grove: RF433T na G26, RF433R na G32) i tłumienie echa w ESP.
 - HACS dla kart.
 
 ## Wsparcie
