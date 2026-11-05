@@ -240,7 +240,7 @@ int main() {
     for (auto &v : x) in >> v;
     std::cout << "=" << hbh_rx::decode(f, lens, x) << "\n";
   }
-  // the press tracker: 3 frames of a key, then release; a single unknown frame is not reported
+  // the press tracker: 3 frames of a key, then release; a single unknown frame is reported too (short tap)
   hbh_rx::Tracker t;
   hbh_rx::Press p;
   bool r1 = t.feed("light", "0101", '0', 1000, 40, &p) || t.feed("light", "0101", '0', 1045, 40, &p) ||
@@ -280,8 +280,8 @@ def check_cpp():
             errors.append(f'C++ decoder differs from the Python mirror (packet {i}): python {py!r}, c++ {cpp!r}')
         if 'T01 light 3 130' not in out:
             errors.append(f'C++ press tracker: expected "T01 light 3 130", got {[o for o in out if o.startswith("T")]}')
-        if 'U00' not in out:
-            errors.append('C++ press tracker reported a single unknown frame')
+        if 'U01' not in out:
+            errors.append('C++ press tracker did not report a single unknown frame')
         return len(res)
 
 

@@ -108,15 +108,15 @@ class Tracker {
   }
 
  private:
-  // an unknown frame counts only when repeated: a remote sends a burst, a single frame is more likely another device
+  // every complete frame is a press, also a single one of an unknown remote: a short tap can reach the receiver as
+  // one frame, and the learning wizard needs it (it wants two equal presses anyway, so a stray frame does no harm)
   bool finish(int frame_ms, Press *done) {
-    bool report = key_ != "unknown" || frames_ >= 2;
-    if (report && done) {
+    if (done) {
       done->key = key_; done->bits = bits_; done->frames = frames_;
       done->held_ms = (int) (last_ - start_) + frame_ms;
     }
     frames_ = 0;
-    return report;
+    return true;
   }
   std::string key_, bits_;
   char tgl_ = 0;

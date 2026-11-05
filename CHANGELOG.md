@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.2.0-beta – 2026-11-05
 
-- **Remote learning wizard**: *Learn remote* – the cards show which key of the original remote to press (each
-  twice); the hood ESP keeps the codes and sends them instead of the profile's – no YAML, no re-flashing. The
-  receiver now reports presses of an unknown remote too (`key: unknown` with the frame bits), and the hood ESP
-  recognises the keys by the learned codes (new sensor *Remote key*). Cards 0.8.0.
+- **Remote learning wizard** (tested on the Ciarko, starting from the example codes of the repo): *Learn remote* –
+  the cards show which key of the original remote to press (each twice); the hood ESP keeps the codes and sends
+  them instead of the profile's – no YAML, no re-flashing. The receiver now reports presses of an unknown remote
+  too (`key: unknown` with the frame bits), and the hood ESP recognises the keys by the learned codes (new sensor
+  *Remote key*). Cards 0.8.0.
 - **Frame formats and key layouts**: profiles set `rf_bit_order` (`hl` mark-space + sync, PT2262 / Ciarko; `lh`
   start pulse + space-mark, CAME) and `rf_start_high`; frames of 12 and 18 bits in one profile; optional keys
   `light_on`, `light_off`, `fan_off`, `power` (stop and the light use them when the remote has them);
@@ -23,6 +24,9 @@
 - **`tools/test_profiles.py`** (in CI): profile structure, transmitter → receiver round trips (clean, jitter, short
   marks) and published captures of real Elica and Neff remotes. It found that a 270 µs sync mark reported 90 µs
   short was rejected – the receiver now accepts a sync mark down to 55 %.
+- Fixes found in the hood test: the first press after a restart of the receiver was taken for the state restored
+  at boot (the wizard went one press behind); a short tap of an unknown remote that reaches the receiver as a single
+  frame is now reported too (it was dropped, and the wizard waited).
 
 ## 0.1.0-beta – 2026-11-04
 
