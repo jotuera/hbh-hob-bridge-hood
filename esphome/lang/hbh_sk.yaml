@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Kalibrácia zlyhala"
   t_cal_aborted: "Kalibrácia prerušená"
   t_cal_profile: "Tabuľka z profilu"
+  # ---- learning the remote
+  n_lrn_start: "Naučiť diaľkový ovládač"
+  n_lrn_reset: "Obnoviť kódy z profilu"
+  n_lrn_state: "Kódy ovládača"
+  t_lrn_running: "Učenie"
+  t_lrn_ok: "Naučené"
+  t_lrn_profile: "Kódy z profilu"
+  t_lrn_aborted: "Učenie prerušené"
+  t_lrn_norx: "Chýba prijímač ovládača"
+  n_remote_key: "Tlačidlo ovládača"

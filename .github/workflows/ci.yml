@@ -32,6 +32,8 @@ jobs:
         run: node --check cards/hbh-cards.js
       - name: Python tools compile
         run: python3 -m py_compile tools/*.py
+      - name: Hood profiles – structure, transmitter → receiver round trips, published captures of real remotes
+        run: python3 tools/test_profiles.py --online --cpp
 
   config:
     name: ESPHome config (all languages)
@@ -48,7 +50,7 @@ jobs:
       - name: Validate every device file
         run: |
           fail=0
-          for f in build/ci/hood_*.yaml build/ci/rx_*.yaml; do
+          for f in build/ci/hood_*.yaml build/ci/rx_*.yaml build/ci/one_*.yaml; do
             if esphome -q config "$f" > /dev/null 2> err.txt; then
               echo "ok   $f"
             else
@@ -64,7 +66,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: [hood, rx]
+        # the tested profile in English, and a CAME profile (other frame format)
+        device: [hood_en, rx_en, one_en, hood_elica_came18, rx_elica_came18]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -81,12 +84,12 @@ jobs:
             ~/.cache/esphome
           key: esphome-${{ env.ESPHOME_VERSION }}-${{ runner.os }}
       - run: python3 tools/ci_configs.py
-      - name: Compile (English)
-        run: esphome compile build/ci/${{ matrix.device }}_en.yaml
+      - name: Compile
+        run: esphome compile build/ci/${{ matrix.device }}.yaml
       - name: Firmware size
         run: ls -l build/ci/.esphome/build/*/build/firmware.*.bin
       - uses: actions/upload-artifact@v7
         with:
-          name: firmware-${{ matrix.device }}-en
+          name: firmware-${{ matrix.device }}
           path: build/ci/.esphome/build/*/build/firmware.*.bin
           retention-days: 14

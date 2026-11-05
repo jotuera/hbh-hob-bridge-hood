@@ -1,0 +1,57 @@
+# HbH – hood profile: Falmec hoods with the 433.92 MHz RF remote with direct speed keys (on, speed 1–4, off)
+#
+# Frame: CAME 16 bit (rc-switch protocol 11 "HT12E": 270 µs, sync 36 + 1, inverted – the same line code as the
+# other CAME profiles). The speed is set directly with speed_1 … speed_4 – the brain uses these keys instead of
+# fan + / − steps. The remote's light key was not captured – learn it as "light" if your remote has one.
+# Falmec manual: the code of the remote can be changed (light + timer) – learn yours with the wizard.
+#
+# STATUS: from a published Arduino sketch – NOT tested on a hood by the author.
+#
+# Source: Kristokarp/falmec-hob2hood (falmec-hob2hood.ino, codes as rc-switch decimals 32699 … 32763).
+substitutions:
+  profile_name: "Falmec CAME 16-bit (untested)"
+
+  # ---- RF frame (µs): CAME – start pulse, then every bit as (space, mark): 1 = long space + short mark
+  rf_one_high: "270"
+  rf_one_low: "540"
+  rf_zero_high: "540"
+  rf_zero_low: "270"
+  rf_start_high: "270"
+  rf_bit_order: "lh"
+  rf_sync_high: "0"
+  rf_sync_low: "9720"       # gap after a frame
+  rf_frame_bits: "16"
+  rf_toggle_bit: "-1"        # none
+  rf_short_frames: "10"
+  rf_hold_frames: "10"
+  rf_colour_frames: "10"
+
+  # ---- keys: full frames ("" = the remote has no such key)
+  key_light: ""
+  key_fan_minus: ""
+  key_fan_plus: ""
+  key_timer: ""
+  key_brighter: ""
+  key_dimmer: ""
+  key_light_on: ""
+  key_light_off: ""
+  key_fan_off: "0111111111111011"         # 32763 off
+  key_power: "0111111110111011"           # 32699 hood on
+  key_speed_1: "0111111100111011"         # 32571 speed 1
+  key_speed_2: "0111111010111011"         # 32443 speed 2
+  key_speed_3: "0111111000111011"         # 32315 speed 3
+  key_speed_4: "0111110110111011"         # 32187 speed 4
+  # keys the learning wizard asks for, in this order
+  rf_learn_keys: "power,speed_1,speed_2,speed_3,speed_4,fan_off"
+
+  # ---- power table, net W above standby: NOT MEASURED for this hood – placeholders. Press "Calibrate hood"
+  # (any key layout of the profiles) or measure the hood with its Shelly and put the values here.
+  pw_standby: "0.5"
+  pw_fan1: "5"
+  pw_fan2: "12"
+  pw_fan3: "30"
+  pw_boost_min: "100"
+  pw_light1: "4"
+  pw_light2: "8"
+  pw_light3: "12"
+  pw_light4: "16"

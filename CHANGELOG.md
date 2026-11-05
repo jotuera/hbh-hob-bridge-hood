@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+- **Remote learning wizard**: *Learn remote* – the cards show which key of the original remote to press (each
+  twice); the hood ESP keeps the codes and sends them instead of the profile's – no YAML, no re-flashing. The
+  receiver now reports presses of an unknown remote too (`key: unknown` with the frame bits), and the hood ESP
+  recognises the keys by the learned codes (new sensor *Remote key*). Cards 0.8.0.
+- **Frame formats and key layouts**: profiles set `rf_bit_order` (`hl` mark-space + sync, PT2262 / Ciarko; `lh`
+  start pulse + space-mark, CAME) and `rf_start_high`; frames of 12 and 18 bits in one profile; optional keys
+  `light_on`, `light_off`, `fan_off`, `power` (stop and the light use them when the remote has them);
+  `rf_learn_keys` sets the keys of the wizard. Profiles must now define all `key_*` (`""` = no such key).
+- **New profiles (untested on hoods)**: BSH SF01 01319004 (Bosch, Siemens, Neff, Constructa, Balay), Elica CAME
+  18-bit, Novy 840029 (all 10 pairing codes), Falmec (direct speeds), Luxair, Zephyr (315 MHz) – from published
+  captures; the receiver's decoder was checked against raw Elica (Flipper) and Neff (SIGNALduino) captures.
+- **Direct speed keys** `speed_1` … `speed_4`: a speed is set with one press when the remote has them.
+- **One Atom** (`hbh-one.yaml`, untested on hardware): transmitter and receiver on one Atom Lite with a Grove hub;
+  presses of the original remote decoded on the ESP, no echo of the own transmitter, HA event kept.
+- **Shared decoder** `esphome/hbh_rx.h` for `hbh-remote-rx.yaml` and `hbh-one.yaml`; `tools/test_profiles.py --cpp`
+  compiles it on the host and compares it packet by packet with the Python mirror.
+- **Calibration for other remotes**: direct speed keys instead of fan + steps, one light level when the remote
+  cannot dim, no boost when the hood has none (the boost threshold is then out of reach).
+- **`tools/test_profiles.py`** (in CI): profile structure, transmitter → receiver round trips (clean, jitter, short
+  marks) and published captures of real Elica and Neff remotes. It found that a 270 µs sync mark reported 90 µs
+  short was rejected – the receiver now accepts a sync mark down to 55 %.
+
 ## 0.1.0-beta – 2026-11-04
 
 First public version of HbH – Hob bridge Hood (formerly CIARKO Hob Hood Bridge), with the

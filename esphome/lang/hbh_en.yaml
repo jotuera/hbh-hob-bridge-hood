@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Calibration failed"
   t_cal_aborted: "Calibration aborted"
   t_cal_profile: "Profile table"
+  # ---- learning the remote
+  n_lrn_start: "Learn remote"
+  n_lrn_reset: "Restore profile codes"
+  n_lrn_state: "Remote codes"
+  t_lrn_running: "Learning"
+  t_lrn_ok: "Learned"
+  t_lrn_profile: "Profile codes"
+  t_lrn_aborted: "Learning aborted"
+  t_lrn_norx: "No remote receiver"
+  n_remote_key: "Remote key"

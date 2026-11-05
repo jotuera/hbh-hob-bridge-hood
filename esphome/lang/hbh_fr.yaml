@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Échec du calibrage"
   t_cal_aborted: "Calibrage interrompu"
   t_cal_profile: "Table du profil"
+  # ---- learning the remote
+  n_lrn_start: "Apprendre la télécommande"
+  n_lrn_reset: "Restaurer les codes du profil"
+  n_lrn_state: "Codes de la télécommande"
+  t_lrn_running: "Apprentissage"
+  t_lrn_ok: "Appris"
+  t_lrn_profile: "Codes du profil"
+  t_lrn_aborted: "Apprentissage interrompu"
+  t_lrn_norx: "Pas de récepteur"
+  n_remote_key: "Touche de la télécommande"

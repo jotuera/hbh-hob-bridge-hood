@@ -45,17 +45,33 @@ ciepłe. Lokalnie, bez chmury, bez automatyzacji w YAML – wszystkie ustawienia
 
 ## Profile okapów
 
-Wszystko, co zależy od okapu, jest w jednym pliku w `esphome/profiles/`: ramka radiowa (czasy bitów, długość ramki,
-bit przełączający), kody przycisków pilota i tabela mocy okapu. Dołącz jeden profil do packages obu urządzeń.
+Wszystko, co zależy od okapu, jest w jednym pliku w `esphome/profiles/`: ramka radiowa (format, czasy bitów, długość
+ramki, bit przełączający), kody przycisków pilota i tabela mocy okapu. Dołącz jeden profil do packages obu urządzeń.
+Wielu producentów okapów ma ten sam pilot z innymi kodami (adresem pilota): profil daje ramkę i układ przycisków, a
+kreator uczenia (krok 5) uczy się adresu Twojego pilota.
 
-| Profil | Okapy | Status |
-|---|---|---|
-| `ciarko_xy8011.yaml` | Ciarko z pilotem z rodziny XY8011-RF – Duo 74 (przetestowany), SU Mini (te same kody klawiszy) | przetestowany |
+| Profil | Okapy | Ramka | Przyciski | Status |
+|---|---|---|---|---|
+| `ciarko_xy8011.yaml` | Ciarko z pilotem XY8011-RF – Duo 74, SU Mini | 36 bitów, bit przełączający | światło, bieg − / +, timer, jaśniej, ciemniej | **przetestowany** |
+| `elica_came18.yaml` | Elica (i okapy, które Elica robi dla innych marek) z 6-przyciskowym pilotem RF | CAME 18 bitów | światło wł. / wył. / przełącz, bieg − / + / wył. | nieprzetestowany |
+| `bsh_sf01_01319004.yaml` | **Bosch, Siemens, Neff, Constructa, Balay** (BSH) z pilotem „Transmitter SF01 01319004”, Refsta Topdraft | CAME 18 bitów | światło, bieg − / +, dobieg | nieprzetestowany |
+| `novy_840029.yaml` | Novy z białym pilotem 840029 (wszystkie 10 kodów parowania) | CAME 12 / 18 bitów | światło, zasilanie, bieg − / + | nieprzetestowany |
+| `falmec_came16.yaml` | Falmec z bezpośrednimi biegami | CAME 16 bitów | wł., bieg 1–4, wył. | nieprzetestowany |
+| `luxair_came18.yaml` | Luxair (UK) z pilotem RF | CAME 18 bitów | światło, bieg − / + / wył., timer | nieprzetestowany |
+| `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, potrzebne moduły 315 MHz | PT2262 24 bity | światło, wentylator (krok), zasilanie, timer | nieprzetestowany |
 
-**Inny okap?** Jeśli pilot nadaje zwykłe ramki OOK (większość pilotów okapów; kody kroczące nie zadziałają), skopiuj
-profil, naucz przyciski odbiornikiem i `tools/learn_codes.py` i zmierz tabelę mocy. Otwórz zgłoszenie *Nowy profil
-okapu* z plikiem – każdy profil to kolejne kuchnie, w których HbH działa. Piloty z innym układem przycisków
-(bezpośrednie biegi, osobne wł./wył. światła), piloty IR i inne częstotliwości (CC1101) są w planach.
+Profile *nieprzetestowane* pochodzą z opublikowanych nagrań (Flipper Zero, inne projekty ESPHome – zobacz
+[NOTICE](NOTICE)); dekoder odbiornika sprawdzono na surowych nagraniach pilotów Elica (Flipper) i Neff (SIGNALduino). Ich tabele mocy są orientacyjne –
+naciśnij *Kalibruj okap*: używa kroków biegu + albo bezpośrednich biegów, mierzy jeden poziom światła, gdy pilot nie
+ściemnia, i pomija boost, gdy okap go nie ma. Opcjonalne przyciski są
+używane, gdy pilot je ma: *wentylator wył.* jako stop, *światło wł. / wył.* zamiast przełączania, *bieg 1–4* do
+bezpośredniego ustawienia biegu.
+
+**Inny okap?** Jeśli pilot nadaje zwykłe ramki OOK na 433,92 MHz (większość pilotów okapów; kody kroczące nie
+zadziałają), skopiuj profil o tym samym formacie ramki (`rf_bit_order: hl` = impuls-przerwa z synchronizacją na końcu,
+PT2262 i Ciarko; `lh` = impuls startowy i przerwa-impuls, CAME), naucz przyciski i zmierz tabelę mocy. Otwórz
+zgłoszenie *Nowy profil okapu* z plikiem – każdy profil to kolejne kuchnie, w których HbH działa. Piloty IR i inne
+częstotliwości (CC1101) są w planach.
 
 ## Jakie Shelly użyć
 
@@ -98,12 +114,17 @@ trzymanie). Nadajnik z tego repo przełącza go jak pilot.
 
 Bez lutowania. Nadajnik kilka metrów od okapu – nie w metalowej szafce.
 
+**Jeden Atom do obu (`hbh-one.yaml`, nieprzetestowany na sprzęcie):** Atom Lite z hubem Grove (np. M5Stack Unit HUB
+U006) i oboma modułami – RF433T nadaje na G26, RF433R podaje dane na G32. Dopisz `one: !include hbh/hbh-one.yaml` do
+packages urządzenia okapu (po `hood:`), *Źródło: pilot (odbiornik)* zostaw puste: naciśnięcia oryginalnego pilota
+są dekodowane w samym ESP (bez HA po drodze), własne nadawanie jest pomijane (bez echa), kreator działa tak samo, a
+zdarzenie HA `esphome.hbh_remote` dalej przychodzi.
+
 ## Instalacja
 
 ### 1. ESPHome
 
-> **Kolejność:** najpierw odbiornik (z przykładowymi kodami), nagraj kody swojego pilota (krok 1b),
-> potem oba urządzenia z Twoimi kodami.
+> Profil ma **przykładowe kody** – okap zareaguje dopiero po nauczeniu Twojego pilota (krok 5, w karcie).
 
 Skopiuj folder `esphome/` z repo do folderu ESPHome jako `hbh/`, dopisz klucze z `secrets.yaml.example` do swojego
 `secrets.yaml` i utwórz plik urządzenia:
@@ -116,9 +137,6 @@ substitutions:
   # opcjonalne domyślne źródła – można je ustawić później w edytorze karty
   src_hood_power: sensor.okap_moc
   src_hood_switch: switch.okap
-  # kody TWOJEGO pilota (krok 1b) – profil ma tylko przykładowe
-  # key_light: "…"
-  # key_fan_minus: "…"   …
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml   # Twój okap
@@ -139,7 +157,6 @@ Odbiornik:
 substitutions:
   name: hbh-remote-rx
   friendly_name: HbH Remote RX
-  # te same linie key_* co w hbh-hood.yaml
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml
@@ -150,21 +167,6 @@ packages:
 Zbuduj je w panelu ESPHome (dodatek Home Assistant) albo poleceniem `esphome`. Pierwsza instalacja przez USB (panel →
 *Install* → *Manual download*, potem wgraj plik przez [web.esphome.io](https://web.esphome.io)), kolejne przez Wi-Fi.
 
-
-### 1b. Kody Twojego pilota
-
-Kody w `esphome/profiles/ciarko_xy8011.yaml` są **przykładowe** (zmyślone ID pilota) – okap na nie nie zareaguje. Każdy pilot ma własne 16-bitowe ID i zależny od niego bajt
-kontrolny, więc kodów nie da się wyliczyć – trzeba je nagrać:
-
-```bash
-esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml
-# naciśnij: światło, bieg −, bieg +, timer, klawisz 4 (jaśniej), klawisz 5 (ciemniej) – potem Ctrl+C
-```
-
-Odbiornik loguje ramki nieznanego pilota jako `unknown frame: <bity>`; narzędzie grupuje je w klawisze, pomija
-bit przełączający i wypisuje linie `key_*`. Wklej je do `substitutions:` **obu** plików urządzeń (okap i odbiornik)
-– nadpisują przykładowe kody profilu – i wgraj oba urządzenia ponownie. Do tego czasu okap nie reaguje na ESP, a
-odbiornik zgłasza każdy klawisz jako `unknown frame`.
 
 ### 2. Home Assistant
 
@@ -210,7 +212,23 @@ Otwórz edytor dowolnej karty, wybierz encje Home Assistant, które zasilają m�
 | Odbiornik pilota – Zdarzenie pilota | wiedzy, że ktoś użył oryginalnego pilota (ręczne przejęcie, podpowiedzi na karcie) |
 | Wilgotność / temperatura kuchni, temperatura / wilgotność na zewnątrz | osuszania |
 
-### 5. Parowanie po zaniku prądu
+### 5. Kody Twojego pilota
+
+Każdy pilot ma własne ID i bajt kontrolny, więc kodów nie da się wyliczyć – uczy się ich odbiornikiem:
+
+1. Otwórz ustawienia karty *okap za płytą* i naciśnij **Naucz pilota** (potrzebne *Źródło: pilot (odbiornik)*).
+2. Karta sterowania pokazuje, który przycisk nacisnąć na oryginalnym pilocie – **każdy dwa razy**, jeden po drugim:
+   światło, bieg −, bieg +, timer, klawisz 4 (jaśniej), klawisz 5 (ciemniej). Okap może przy tym reagować.
+3. Po szóstym przycisku *Kody pilota* pokazuje **Nauczone**. Kody zostają w ESP (bez YAML-a i ponownego wgrywania),
+   a log wypisuje je jako linie `key_*` do profilu.
+
+*Przywróć kody z profilu* wraca do kodów profilu; *Naucz pilota* w trakcie uczenia je przerywa, a 90 s bez
+naciśnięcia kończy kreator.
+
+**Bez karty:** `esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml` (każdy przycisk
+dwa razy, potem Ctrl+C) wypisuje linie `key_*` – wklej je do `substitutions:` obu plików urządzeń i wgraj je ponownie.
+
+### 6. Parowanie po zaniku prądu
 
 Okap po włączeniu zasilania przez 60 s paruje się z pierwszym pilotem, który usłyszy. Gdy zasilanie okapu jest
 źródłem, ESP wysyła „bieg −” 5 s po włączeniu przekaźnika. W przeciwnym razie wyłącz i włącz okap i w ciągu minuty
@@ -307,6 +325,7 @@ się na wersji ESPHome, na której działają urządzenia autora. To samo lokaln
 
 ```bash
 python3 tools/gen_card_names.py --check
+python3 tools/test_profiles.py --online   # profile: w obie strony + prawdziwe nagrania
 python3 tools/ci_configs.py              # pliki urządzeń dla każdego języka w build/ci/
 esphome config build/ci/hood_de.yaml
 ```
@@ -335,7 +354,6 @@ kontrolny + bit przełączający + `010`), czasy, kody klawiszy, co robi przytrz
 ## Plany
 
 - Więcej profili okapów – inne układy klawiszy, piloty IR, inne częstotliwości (CC1101).
-- Jeden Atom z oboma modułami (hub Grove: RF433T na G26, RF433R na G32) i tłumienie echa w ESP.
 - HACS dla kart.
 
 ## Wsparcie

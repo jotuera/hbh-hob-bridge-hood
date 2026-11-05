@@ -46,18 +46,32 @@ evening. Local, no cloud, no YAML automations – all settings are entities of t
 
 ## Hood profiles
 
-Everything that depends on the hood lives in one file in `esphome/profiles/`: the RF frame (bit timing, frame length,
-toggle bit), the codes of the remote's keys and the hood's power table. Include one profile in the packages of both
-devices.
+Everything that depends on the hood lives in one file in `esphome/profiles/`: the RF frame (format, bit timing,
+frame length, toggle bit), the codes of the remote's keys and the hood's power table. Include one profile in the
+packages of both devices. Many hood brands share one remote with other codes (the address of the remote): the
+profile gives the frame and the key layout, the learning wizard (step 5) learns your remote's address.
 
-| Profile | Hoods | Status |
-|---|---|---|
-| `ciarko_xy8011.yaml` | Ciarko with the XY8011-RF remote family – Duo 74 (tested), SU Mini (same key codes) | tested |
+| Profile | Hoods | Frame | Keys | Status |
+|---|---|---|---|---|
+| `ciarko_xy8011.yaml` | Ciarko with the XY8011-RF remote – Duo 74, SU Mini | 36 bit, toggle bit | light, fan − / +, timer, brighter, dimmer | **tested** |
+| `elica_came18.yaml` | Elica (and hoods Elica builds for other brands) with the 6-key RF remote | CAME 18 bit | light on / off / toggle, fan − / + / off | untested |
+| `bsh_sf01_01319004.yaml` | **Bosch, Siemens, Neff, Constructa, Balay** (BSH) with the remote "Transmitter SF01 01319004", Refsta Topdraft | CAME 18 bit | light, fan − / +, run-on | untested |
+| `novy_840029.yaml` | Novy with the white remote 840029 (all 10 pairing codes listed) | CAME 12 / 18 bit | light, power, fan − / + | untested |
+| `falmec_came16.yaml` | Falmec with direct speed keys | CAME 16 bit | on, speed 1–4, off | untested |
+| `luxair_came18.yaml` | Luxair (UK) with the RF remote | CAME 18 bit | light, fan − / + / off, timer | untested |
+| `zephyr_pt2262_315.yaml` | Zephyr Lux Glo Island – **315 MHz**, needs 315 MHz modules | PT2262 24 bit | light, fan (step), power, timer | untested |
 
-**Another hood?** If its remote sends plain OOK frames (most hood remotes do; rolling codes cannot work), copy a
-profile, learn your keys with the receiver and `tools/learn_codes.py`, and measure the power table. Open an issue
-*New hood profile* with the file – every profile makes HbH work for more kitchens. Remotes with other key layouts
-(direct speed keys, separate light on/off), IR remotes and other frequencies (CC1101) are on the roadmap.
+*Untested* profiles come from published captures (Flipper Zero, other ESPHome projects – see [NOTICE](NOTICE));
+the receiver's decoder was checked against raw captures of Elica (Flipper) and Neff (SIGNALduino) remotes. Their power tables are placeholders – press
+*Calibrate hood*: it uses fan + steps or the direct speed keys, measures one light level when the remote cannot dim
+and leaves boost out when the hood has none. Optional keys are used when a
+remote has them: *fan off* for stop, *light on / off* instead of the toggle, *speed 1–4* to set a speed directly.
+
+**Another hood?** If its remote sends plain OOK frames at 433.92 MHz (most hood remotes do; rolling codes cannot
+work), copy the profile with the same frame format (`rf_bit_order: hl` = mark-space with a sync at the end, PT2262
+and Ciarko; `lh` = start pulse and space-mark, CAME), learn the keys and measure the power table. Open an issue
+*New hood profile* with the file – every profile makes HbH work for more kitchens. IR remotes and other
+frequencies (CC1101) are on the roadmap.
 
 ## Which Shelly to use
 
@@ -100,12 +114,17 @@ toggle bit as the previous one (it takes it as the same key still held). The tra
 
 No soldering. Put the transmitter within a few metres of the hood – not inside a metal cabinet.
 
+**One Atom for both (`hbh-one.yaml`, untested on hardware):** an Atom Lite with a Grove hub (e.g. M5Stack Unit HUB
+U006) and both units – the RF433T sends on G26, the RF433R outputs on G32. Add `one: !include hbh/hbh-one.yaml` to
+the packages of the hood device (after `hood:`), leave *Source: remote receiver* empty: the presses of the original
+remote are decoded on the ESP itself (no HA in between), the own transmissions are skipped (no echo), the wizard
+works the same and the HA event `esphome.hbh_remote` still fires.
+
 ## Installation
 
 ### 1. ESPHome
 
-> **Order:** first the receiver (with the example codes), learn your remote's codes (step 1b), then
-> both devices with your codes.
+> The profile ships with **example codes** – the hood reacts only after you learn your remote (step 5, in the card).
 
 Copy the `esphome/` folder of this repo to your ESPHome folder as `hbh/`, add the keys of
 `secrets.yaml.example` to your `secrets.yaml` and create the device file:
@@ -118,9 +137,6 @@ substitutions:
   # optional defaults of the sources – they can be set later in the card editor
   src_hood_power: sensor.hood_power
   src_hood_switch: switch.hood
-  # the codes of YOUR remote (step 1b) – the profile only has examples
-  # key_light: "…"
-  # key_fan_minus: "…"   …
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml   # your hood
@@ -141,7 +157,6 @@ The receiver:
 substitutions:
   name: hbh-remote-rx
   friendly_name: HbH Remote RX
-  # the same key_* lines as in hbh-hood.yaml
 
 packages:
   profile: !include hbh/profiles/ciarko_xy8011.yaml
@@ -153,21 +168,6 @@ Build them with the ESPHome dashboard (Home Assistant add-on) or the `esphome` C
 (dashboard → *Install* → *Manual download*, then flash the file with [web.esphome.io](https://web.esphome.io)), later
 installs go over Wi-Fi.
 
-
-### 1b. Your remote's codes
-
-The codes in `esphome/profiles/ciarko_xy8011.yaml` are **examples** (placeholder remote ID) – the hood will not react to them. Each remote has its own 16-bit ID and a check
-byte that depends on it, so the codes cannot be computed – they have to be learned:
-
-```bash
-esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml
-# press: light, fan −, fan +, timer, key 4 (brighter), key 5 (dimmer) – then Ctrl+C
-```
-
-The receiver logs frames of an unknown remote as `unknown frame: <bits>`; the tool groups them into keys, ignores
-the toggle bit and writes the `key_*` lines. Paste them into the `substitutions:` of **both** device files (hood
-and receiver) – they override the example codes of the profile – and install both devices again. Until then the
-hood does not react to the ESP and the receiver reports every key as `unknown frame`.
 
 ### 2. Home Assistant
 
@@ -213,7 +213,24 @@ Open the editor of any card and choose the Home Assistant entities that feed the
 | Remote receiver – Remote event | knowing that someone used the original remote (manual takeover, card hints) |
 | Kitchen humidity / temperature, outdoor temperature / humidity | drying |
 
-### 5. Pairing after a power cut
+### 5. Your remote's codes
+
+Every remote has its own ID and check byte, so the codes cannot be computed – they are learned with the receiver:
+
+1. Open the settings of the *hood follows the hob* card and press **Learn remote** (it needs *Source: remote receiver*).
+2. The control card shows which key to press on the original remote – **each key twice**, one after the other:
+   light, fan −, fan +, timer, key 4 (brighter), key 5 (dimmer). The hood may react – that is fine.
+3. After the sixth key *Remote codes* shows **Learned**. The codes are kept in the ESP (no YAML, no re-flashing) and
+   the log prints them as `key_*` lines for a profile.
+
+*Restore profile codes* goes back to the codes of the profile; *Learn remote* during learning cancels it, and 90 s
+without a press ends it.
+
+**Without the card:** `esphome logs hbh-remote-rx.yaml | python3 tools/learn_codes.py -o my_remote.yaml` (press every
+key twice, then Ctrl+C) writes the `key_*` lines – paste them into the `substitutions:` of both device files and
+install them again.
+
+### 6. Pairing after a power cut
 
 After power-up the hood pairs for 60 s with the first remote it hears. With the hood relay as a source, the ESP sends
 a *fan −* 5 s after the relay switches the hood on. Otherwise switch the hood off and on and press any key on the card
@@ -310,6 +327,7 @@ with the ESPHome version the author's devices run. The same locally:
 
 ```bash
 python3 tools/gen_card_names.py --check
+python3 tools/test_profiles.py --online   # profiles: round trips + real captures
 python3 tools/ci_configs.py              # device files for every language in build/ci/
 esphome config build/ci/hood_de.yaml
 ```
@@ -337,7 +355,6 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## Roadmap
 
 - More hood profiles – other key layouts, IR remotes, other frequencies (CC1101).
-- One Atom with both units (Grove hub: RF433T on G26, RF433R on G32) and echo suppression on the ESP.
 - HACS for the cards.
 
 ## Support

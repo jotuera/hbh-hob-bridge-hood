@@ -1,0 +1,69 @@
+# HbH – Hob bridge Hood: ONE Atom with the transmitter AND the receiver of the original remote
+#
+# Add this package AFTER hbh.yaml (same device, same entities):
+#
+#   packages:
+#     profile: !include hbh/profiles/ciarko_xy8011.yaml
+#     lang: !include hbh/lang/hbh_en.yaml
+#     hood: !include hbh/hbh.yaml
+#     one: !include hbh/hbh-one.yaml
+#
+# Hardware: M5Stack Atom Lite + Grove hub (e.g. M5Stack Unit HUB U006) + Unit RF433T + Unit RF433R. The hub puts
+# both units on the Atom's Grove port: the RF433T sends on G26, the RF433R outputs on G32 (the other Grove wire).
+#
+# The receiver is decoded on this ESP (hbh_rx.h, the same code as hbh-remote-rx.yaml): presses of the original
+# remote go straight to the brain (no Home Assistant in between, no "Source: remote receiver" to set – leave it
+# empty), own transmissions are skipped while the transmitter is busy (no echo), the learning wizard works the
+# same, and every press is also sent as the HA event esphome.hbh_remote {key, frames, held_ms, bits}.
+substitutions:
+  rx_pin: GPIO32
+
+globals:
+  # registers the built-in receiver before on_boot (has_receiver for the wizard)
+  - id: g_rx_builtin
+    type: bool
+    initial_value: 'hbh::use_rx_builtin()'
+
+remote_receiver:
+  id: rf_rx
+  pin:
+    number: ${rx_pin}
+    inverted: false
+  tolerance: 30%
+  filter: 120us
+  idle: 3ms           # shorter than the gap after a frame: every frame is its own packet
+  buffer_size: 4kb
+  # no dump: raw – the receiver outputs noise all the time and would flood the log/API
+  on_raw:
+    then:
+      - lambda: 'hbh::rx_raw(x);'
+
+interval:
+  # key released = no frames for > 250 ms -> report
+  - interval: 50ms
+    then:
+      - lambda: |-
+          static bool init = false;
+          if (!init) {
+            init = true;
+            hbh::rx_event = [](const hbh_rx::Press &p) { id(rx_ha_event).execute(p.key, p.frames, p.held_ms, p.bits); };
+          }
+          hbh::rx_poll();
+
+script:
+  - id: rx_ha_event
+    mode: queued
+    max_runs: 5
+    parameters:
+      key: string
+      frames: int
+      held_ms: int
+      bits: string
+    then:
+      - homeassistant.event:
+          event: esphome.hbh_remote
+          data:
+            key: !lambda "return key;"
+            frames: !lambda "return frames;"
+            held_ms: !lambda "return held_ms;"
+            bits: !lambda "return bits;"

@@ -127,3 +127,13 @@ substitutions:
   t_cal_failed: "Calibración fallida"
   t_cal_aborted: "Calibración cancelada"
   t_cal_profile: "Tabla del perfil"
+  # ---- learning the remote
+  n_lrn_start: "Aprender el mando"
+  n_lrn_reset: "Restaurar códigos del perfil"
+  n_lrn_state: "Códigos del mando"
+  t_lrn_running: "Aprendiendo"
+  t_lrn_ok: "Aprendidos"
+  t_lrn_profile: "Códigos del perfil"
+  t_lrn_aborted: "Aprendizaje cancelado"
+  t_lrn_norx: "Sin receptor del mando"
+  n_remote_key: "Tecla del mando"

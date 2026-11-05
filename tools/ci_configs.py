@@ -6,7 +6,7 @@
     esphome compile build/ci/hood_en.yaml         # build one
 
 build/ci/ gets a copy of esphome/ as hbh/ (the layout of the README), dummy secrets and one file per device,
-language and profile: hood_<lang>.yaml, rx_<lang>.yaml (profile ciarko_xy8011) and hood_<profile>.yaml for the
+language and profile: hood_<lang>.yaml, rx_<lang>.yaml, one_<lang>.yaml (one Atom; profile ciarko_xy8011) and hood_<profile>.yaml for the
 other profiles.
 """
 import base64
@@ -37,6 +37,9 @@ packages:
   hood: !include hbh/hbh.yaml
 '''
 
+ONE = HOOD + '''  one: !include hbh/hbh-one.yaml
+'''
+
 RX = '''packages:
   profile: !include hbh/profiles/{profile}.yaml
   lang: !include hbh/lang/remote_rx_{lang}.yaml
@@ -63,6 +66,7 @@ def main():
     for lang in langs:
         write(f'hood_{lang}.yaml', HOOD.format(profile=DEFAULT_PROFILE, lang=lang))
         write(f'rx_{lang}.yaml', RX.format(profile=DEFAULT_PROFILE, lang=lang))
+        write(f'one_{lang}.yaml', ONE.format(profile=DEFAULT_PROFILE, lang=lang))
     for p in profiles:
         if p != DEFAULT_PROFILE:
             write(f'hood_{p}.yaml', HOOD.format(profile=p, lang='en'))

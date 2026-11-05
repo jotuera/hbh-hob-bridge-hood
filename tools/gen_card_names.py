@@ -100,7 +100,7 @@ for lang in ['en'] + sorted(k for k in hood if k != 'en'):
     for k, v in hood[lang].items():
         if k.startswith('n_'):
             names.setdefault(k, {})[lang] = v
-        elif k.startswith(('t_mode_', 't_dry_', 't_cal_')) or k in ('t_off', 't_boost', 't_cool', 't_warm'):
+        elif k.startswith(('t_mode_', 't_dry_', 't_cal_', 't_lrn_')) or k in ('t_off', 't_boost', 't_cool', 't_warm'):
             states.setdefault(k, {})[lang] = v
 
 src = open(CARD, encoding='utf-8').read()
