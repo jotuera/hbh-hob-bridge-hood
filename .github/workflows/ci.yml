@@ -32,6 +32,8 @@ jobs:
         run: node --check cards/hbh-cards.js
       - name: Python tools compile
         run: python3 -m py_compile tools/*.py
+      - name: Hood profiles – structure, transmitter → receiver round trips, published captures of real remotes
+        run: python3 tools/test_profiles.py --online
 
   config:
     name: ESPHome config (all languages)

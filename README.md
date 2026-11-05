@@ -320,6 +320,7 @@ with the ESPHome version the author's devices run. The same locally:
 
 ```bash
 python3 tools/gen_card_names.py --check
+python3 tools/test_profiles.py --online   # profiles: round trips + real captures
 python3 tools/ci_configs.py              # device files for every language in build/ci/
 esphome config build/ci/hood_de.yaml
 ```

@@ -318,6 +318,7 @@ się na wersji ESPHome, na której działają urządzenia autora. To samo lokaln
 
 ```bash
 python3 tools/gen_card_names.py --check
+python3 tools/test_profiles.py --online   # profile: w obie strony + prawdziwe nagrania
 python3 tools/ci_configs.py              # pliki urządzeń dla każdego języka w build/ci/
 esphome config build/ci/hood_de.yaml
 ```

@@ -176,7 +176,7 @@ remote_receiver:
             // NB bits (mark, space) followed by the frame-end pulse (sync mark); noise can contain a fake candidate,
             // so try all of them
             for (int sync = 2 * NB; sync < (int) x.size() && !ok; sync++) {
-              if (x[sync] < SH * 7 / 10 || x[sync] > SH * 135 / 100) continue;
+              if (x[sync] < SH * 55 / 100 || x[sync] > SH * 135 / 100) continue;   // receivers report marks up to ~90 µs short
               candidate = true;
               bits.clear();
               int i = sync - 2 * NB;
