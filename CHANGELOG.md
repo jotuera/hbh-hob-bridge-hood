@@ -14,6 +14,11 @@
   18-bit, Novy 840029 (all 10 pairing codes), Falmec (direct speeds), Luxair, Zephyr (315 MHz) – from published
   captures; the receiver's decoder was checked against raw Elica (Flipper) and Neff (SIGNALduino) captures.
 - **Direct speed keys** `speed_1` … `speed_4`: a speed is set with one press when the remote has them.
+- **Calibration for other remotes**: direct speed keys instead of fan + steps, one light level when the remote
+  cannot dim, no boost when the hood has none (the boost threshold is then out of reach).
+- **`tools/test_profiles.py`** (in CI): profile structure, transmitter → receiver round trips (clean, jitter, short
+  marks) and published captures of real Elica and Neff remotes. It found that a 270 µs sync mark reported 90 µs
+  short was rejected – the receiver now accepts a sync mark down to 55 %.
 
 ## 0.1.0-beta – 2026-11-04
 

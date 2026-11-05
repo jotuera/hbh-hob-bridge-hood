@@ -44,8 +44,8 @@ substitutions:
   # keys the learning wizard asks for, in this order
   rf_learn_keys: "power,speed_1,speed_2,speed_3,speed_4,fan_off"
 
-  # ---- power table, net W above standby: NOT MEASURED for this hood – placeholders. Measure the hood with its
-  # Shelly and put the values here ("Calibrate hood" needs fan + up to boost and brighter / dimmer).
+  # ---- power table, net W above standby: NOT MEASURED for this hood – placeholders. Press "Calibrate hood"
+  # (any key layout of the profiles) or measure the hood with its Shelly and put the values here.
   pw_standby: "0.5"
   pw_fan1: "5"
   pw_fan2: "12"

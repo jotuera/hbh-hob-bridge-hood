@@ -62,7 +62,8 @@ kreator uczenia (krok 5) uczy się adresu Twojego pilota.
 
 Profile *nieprzetestowane* pochodzą z opublikowanych nagrań (Flipper Zero, inne projekty ESPHome – zobacz
 [NOTICE](NOTICE)); dekoder odbiornika sprawdzono na surowych nagraniach pilotów Elica (Flipper) i Neff (SIGNALduino). Ich tabele mocy są orientacyjne –
-naciśnij *Kalibruj okap* (wymaga biegu + aż do boost i jaśniej / ciemniej) albo je zmierz. Opcjonalne przyciski są
+naciśnij *Kalibruj okap*: używa kroków biegu + albo bezpośrednich biegów, mierzy jeden poziom światła, gdy pilot nie
+ściemnia, i pomija boost, gdy okap go nie ma. Opcjonalne przyciski są
 używane, gdy pilot je ma: *wentylator wył.* jako stop, *światło wł. / wył.* zamiast przełączania, *bieg 1–4* do
 bezpośredniego ustawienia biegu.
 

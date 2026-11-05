@@ -63,7 +63,8 @@ profile gives the frame and the key layout, the learning wizard (step 5) learns 
 
 *Untested* profiles come from published captures (Flipper Zero, other ESPHome projects – see [NOTICE](NOTICE));
 the receiver's decoder was checked against raw captures of Elica (Flipper) and Neff (SIGNALduino) remotes. Their power tables are placeholders – press
-*Calibrate hood* (needs fan + up to boost and brighter / dimmer) or measure them. Optional keys are used when a
+*Calibrate hood*: it uses fan + steps or the direct speed keys, measures one light level when the remote cannot dim
+and leaves boost out when the hood has none. Optional keys are used when a
 remote has them: *fan off* for stop, *light on / off* instead of the toggle, *speed 1–4* to set a speed directly.
 
 **Another hood?** If its remote sends plain OOK frames at 433.92 MHz (most hood remotes do; rolling codes cannot

@@ -935,6 +935,7 @@ struct Cal {
   std::vector<float> samples;
   float v[10] = {0};       // standby, f1, f2, f3, boost, (stop), l1, l2, l3, l4 – raw W
   std::string result;      // "", "ok", "close:a~b", "failed", "aborted"
+  bool dim = true;         // the remote has brighter / dimmer – four light levels, else one
 };
 inline Cal CAL;
 inline std::function<void(const float *, bool)> cal_store;   // saves the table (net W) – provided by the YAML
@@ -944,7 +945,9 @@ inline void cal_start() {
   if (CAL.active) { CAL.active = false; CAL.result = "aborted"; ESP_LOGW(TAG, "calibration aborted"); return; }
   Q.clear(); job_active = false; target_speed = -1; target_light = -1;
   CAL = Cal(); CAL.active = true; CAL.t = now_ms();
-  ESP_LOGI(TAG, "calibration started");
+  CAL.dim = has_key("brighter") && has_key("dimmer");
+  ESP_LOGI(TAG, "calibration started (%s, %s)", has_key("speed_1") ? "direct speed keys" : "fan + steps",
+           CAL.dim ? "4 light levels" : "one light level");
 }
 
 inline float median(std::vector<float> v) {
@@ -959,7 +962,11 @@ inline void cal_finish() {
   float f[4] = {0, CAL.v[1] - sb, CAL.v[2] - sb, CAL.v[3] - sb};
   float boost = CAL.v[4] - sb;
   float l[4] = {CAL.v[6] - sb, CAL.v[7] - sb, CAL.v[8] - sb, CAL.v[9] - sb};
-  bool mono = f[1] > 0.5f && f[2] > f[1] && f[3] > f[2] && boost > f[3] && l[0] > 0.5f && l[1] > l[0] && l[2] > l[1] && l[3] > l[2];
+  // a hood without boost (or a remote whose 4th fan + wraps to off): the boost threshold is set out of reach
+  bool has_boost = boost > f[3] * 1.3f + 5.0f;
+  if (!has_boost) { boost = f[3] * 4.0f + 100.0f; ESP_LOGI(TAG, "calibration: no boost measured – boost not used"); }
+  bool light_ok = CAL.dim ? (l[0] > 0.5f && l[1] > l[0] && l[2] > l[1] && l[3] > l[2]) : l[0] > 0.5f;
+  bool mono = f[1] > 0.5f && f[2] > f[1] && f[3] > f[2] && light_ok;
   if (!mono) {
     CAL.result = "failed";
     ESP_LOGW(TAG, "calibration failed: %.1f | %.1f %.1f %.1f %.1f | %.1f %.1f %.1f %.1f", sb, f[1], f[2], f[3], boost, l[0], l[1], l[2], l[3]);
@@ -991,10 +998,22 @@ inline void loop_cal() {
         if (E.pb > 0) press_stop();
         if (E.pl) press_light(false);
         break;
-      case 1: case 2: case 3: case 4: press("fan_plus"); break;
+      case 1: case 2: case 3: case 4:   // speed 1–3 and boost: direct keys when the remote has them, else fan + steps
+        if (!press_speed(CAL.step)) press("fan_plus");
+        break;
       case 5: press_stop(); break;
-      case 6: press_light(true); for (int i = 0; i < 4; i++) press("dimmer"); break;   // on, then down to 25 %
-      case 7: case 8: case 9: press("brighter"); break;
+      case 6:  // light on (then down to 25 % when it can be dimmed)
+        press_light(true);
+        if (CAL.dim) for (int i = 0; i < 4; i++) press("dimmer");
+        break;
+      case 7: case 8: case 9:
+        if (!CAL.dim) {            // one light level: the same value, no press, no wait
+          CAL.v[CAL.step] = CAL.v[6];
+          CAL.step++;
+          return;
+        }
+        press("brighter");
+        break;
       case 10: press_light(false); cal_finish(); return;
     }
     go(1);
